@@ -1,0 +1,9 @@
+este folosit un buffer initial care merge MEREU si tine ultimele 5 secunde din filmare,
+retinut in memoria RAM(sau VRAM ?? ) 
+in momentul in care cineva sta in cadru minim 2 secunde, filmarea este trimisa din VRAM in RAM, apoi se trimite cadru cu cadru 
+in momentul in care acel cineva sau acei cineva ies din filmare, incepe o numaratoare de 5 secunde(cum camera filmeaza probabil la 30 fps => 150 de cadre) . daca nu mai intra nimeni , atunci se incheie aceasta inregistrare de buffer final 
+
+pe monitorul LIVE vedem cum softul pune dreptunghiuri pe oameni, in timp ce pe SSD 
+este salvata imaginea clara 
+
+
