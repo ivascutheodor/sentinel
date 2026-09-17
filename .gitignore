@@ -15,4 +15,4 @@ runs/
 Thumbs.db
 .vscode/
 
-
+.env
