@@ -6,14 +6,15 @@ from app.core.version import get_version
 settings = get_settings()
 
 app = FastAPI(
-	title=settings.app_name,
-	version=get_version(),
-	debug=settings.debug,
+    title=settings.app_name,
+    version=get_version(),
+    debug=settings.debug,
 )
+
 
 @app.get("/health")
 async def health_check() -> dict[str, str]:
-	return {
-		"status": "ok",
-		"environment": settings.environment,
-	}
+    return {
+        "status": "ok",
+        "environment": settings.environment,
+    }

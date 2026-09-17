@@ -4,12 +4,13 @@ from app.main import app
 
 client = TestClient(app)
 
+
 def test_health_check() -> None:
-	response = client.get("/health")
+    response = client.get("/health")
 
-	assert response.status_code == 200
+    assert response.status_code == 200
 
-	body = response.json()
+    body = response.json()
 
-	assert body["status"] == "ok"
-	assert "environment" in body
+    assert body["status"] == "ok"
+    assert "environment" in body
