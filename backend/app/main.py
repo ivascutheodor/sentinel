@@ -15,5 +15,5 @@ app = FastAPI(
 async def health_check() -> dict[str, str]:
 	return {
 		"status": "ok",
-		"version": settings.environment,
+		"environment": settings.environment,
 	}
