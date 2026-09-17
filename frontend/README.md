@@ -7,12 +7,6 @@ Make sure you have installed:
 - Node.js 22+
 - pnpm
 
-Check your versions:
-
-```bash
-node --version
-pnpm --version
-```
 
 ## Install Dependencies
 
