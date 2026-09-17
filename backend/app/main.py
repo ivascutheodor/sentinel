@@ -1,11 +1,19 @@
 from fastapi import FastAPI
-from importlib.metadata import version
+
 from app.core.config import get_settings
+from app.core.version import get_version
 
 settings = get_settings()
 
 app = FastAPI(
-	title=settings.APP_NAME,
-	version=version("sentinel-backend"),
-	debug=settings.DEBUG,
+	title=settings.app_name,
+	version=get_version(),
+	debug=settings.debug,
 )
+
+@app.get("/health")
+async def health_check() -> dict[str, str]:
+	return {
+		"status": "ok",
+		"version": settings.environment,
+	}
