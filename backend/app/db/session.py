@@ -5,7 +5,6 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import get_settings
 
-
 settings = get_settings()
 
 database_url = URL.create(

@@ -11,10 +11,12 @@ class UserRole(StrEnum):
     ADMIN = "admin"
     USER = "user"
 
+
 class CaptureState(StrEnum):
     CAPTURING = "capturing"
     COMPLETED = "completed"
     INTERRUPTED = "interrupted"
+
 
 class VideoStatus(StrEnum):
     PENDING = "pending"
@@ -23,6 +25,7 @@ class VideoStatus(StrEnum):
     DELETING = "deleting"
     DELETED = "deleted"
 
+
 class MediaStatus(StrEnum):
     QUEUED = "queued"
     RUNNING = "running"
@@ -30,13 +33,16 @@ class MediaStatus(StrEnum):
     FAILED = "failed"
     CANCELLED = "cancelled"
 
+
 class EventType(StrEnum):
     PERSON_PRESENCE = "person_presence"
+
 
 class AuditOutcome(StrEnum):
     SUCCESS = "success"
     DENIED = "denied"
     FAILURE = "failure"
+
 
 user_role_type = SQLAlchemyEnum(
     UserRole,
