@@ -2,8 +2,10 @@ import cv2
 import json
 import numpy as np
 
-VIDEO_PATH = r"E:\cctv_lockers\data\clips\filmare_test_3.mp4"
-CONFIG_PATH = r"config_zona.json"
+from config import settings
+
+VIDEO_PATH = settings.capture_source()
+CONFIG_PATH = settings.zone_config
 
 cap = cv2.VideoCapture(VIDEO_PATH)
 if not cap.isOpened():
