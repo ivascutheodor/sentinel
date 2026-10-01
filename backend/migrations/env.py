@@ -4,6 +4,7 @@ from alembic import context
 
 from app.db.base import Base
 from app.db.session import engine
+import app.db.models # noqa
 
 config = context.config
 
