@@ -8,7 +8,8 @@ from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Protocol
-
+from config import settings
+import requests
 
 class VideoWriter(Protocol):
     def write(self, frame: Any) -> None: ...
@@ -57,6 +58,18 @@ class IncidentRecorder:
                 self._writer.write(raw_frame)
             elif self._presence_counter >= self._min_presence_frames:
                 self._start()
+                #payload is sent to the server via API 
+                try:
+                    payload = {
+                        "camera_id": settings.camera_id,
+                        "status": "capturing",
+                        "message": "Person insider the perimeter!"
+                    }
+                    url = f"{settings.api_url}/events"
+                    requests.post(url, json=payload, timeout=2.0)
+                    print("[API] Recording has started.")
+                except requests.exceptions.RequestException as e:
+                    print(f"[API Eroare] Backend is down, but recording is still on: {e}")
             return None
 
         self._presence_counter = 0
@@ -68,6 +81,7 @@ class IncidentRecorder:
             self._post_roll_counter -= 1
             return None
         return self._finish()
+
 
     def close(self) -> Path | None:
         """Call on shutdown so a half-written clip is still saved properly."""
@@ -85,4 +99,18 @@ class IncidentRecorder:
         assert self._writer is not None
         self._writer.release()
         clip, self._writer, self.current_clip = self.current_clip, None, None
+        if clip is not None:
+            try:
+                payload = {
+                    "camera_id": settings.camera_id,
+                    "status": "completed",
+                    "message": "Incident finalizat.",
+                    "video_path": str(clip)  # Foarte util: ii trimiti colegului exact unde e fisierul!
+                }
+                url = f"{settings.api_url}/events"
+                # Folosim POST (sau PATCH, iti va confirma colegul cand are ruta gata)
+                requests.post(url, json=payload, timeout=2.0)
+                print(f"[API] Incident incheiat. Clip salvat la: {clip}")
+            except requests.exceptions.RequestException as e:
+                print(f"[API Eroare] Nu am putut trimite finalizarea clipului: {e}")
         return clip

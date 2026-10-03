@@ -27,6 +27,11 @@ class Settings:
     model_path: str = str(_resolve(os.getenv("SENTINEL_MODEL", "yolo11n.pt")))
     clips_dir: Path = _resolve(os.getenv("SENTINEL_CLIPS_DIR", "clips"))
 
+    #example, should be changed 
+    api_url: str = os.getenv("SENTINEL_API_URL", "http://127.0.0.1:8000/api/v1")
+    camera_id: str = os.getenv("SENTINEL_CAMERA_ID", "test_camera_01")
+
+
     pre_roll_seconds: float = float(os.getenv("SENTINEL_PRE_ROLL_SECONDS", "5"))
     post_roll_seconds: float = float(os.getenv("SENTINEL_POST_ROLL_SECONDS", "5"))
     # Someone must stay in the zone this long before an incident is recorded

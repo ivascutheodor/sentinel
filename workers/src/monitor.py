@@ -7,6 +7,9 @@ from config import settings
 from recorder import IncidentRecorder
 from zone import foot_point, is_in_zone, load_zone
 
+#For API usage
+import requests 
+
 RED, GREEN, BLUE = (0, 0, 255), (0, 255, 0), (255, 0, 0)
 
 
