@@ -2,9 +2,9 @@ from logging.config import fileConfig
 
 from alembic import context
 
+import app.db.models  # noqa
 from app.db.base import Base
 from app.db.session import engine
-import app.db.models # noqa
 
 config = context.config
 
