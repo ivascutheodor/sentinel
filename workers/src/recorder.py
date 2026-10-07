@@ -84,7 +84,6 @@ class IncidentRecorder:
 
 
     def close(self) -> Path | None:
-        """Call on shutdown so a half-written clip is still saved properly."""
         return self._finish() if self._writer is not None else None
 
     def _start(self) -> None:
@@ -103,14 +102,12 @@ class IncidentRecorder:
             try:
                 payload = {
                     "camera_id": settings.camera_id,
-                    "status": "completed",
-                    "message": "Incident finalizat.",
-                    "video_path": str(clip)  # Foarte util: ii trimiti colegului exact unde e fisierul!
+                    "video_path": str(clip)  # file path
                 }
                 url = f"{settings.api_url}/events"
                 # Folosim POST (sau PATCH, iti va confirma colegul cand are ruta gata)
                 requests.post(url, json=payload, timeout=2.0)
-                print(f"[API] Incident incheiat. Clip salvat la: {clip}")
+                print(f"[API] Saved incident. Saved clip at: {clip}")
             except requests.exceptions.RequestException as e:
-                print(f"[API Eroare] Nu am putut trimite finalizarea clipului: {e}")
+                print(f"[API Error] Error, couldn't save the clip: {e}")
         return clip
