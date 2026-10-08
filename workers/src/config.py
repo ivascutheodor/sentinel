@@ -25,7 +25,7 @@ class Settings:
     video_source: str = os.getenv("SENTINEL_VIDEO_SOURCE", str(WORKERS_DIR / "test.mp4"))
     zone_config: Path = _resolve(os.getenv("SENTINEL_ZONE_CONFIG", "src/config_zona.json"))
     model_path: str = str(_resolve(os.getenv("SENTINEL_MODEL", "yolo11n.pt")))
-    clips_dir: Path = _resolve(os.getenv("SENTINEL_CLIPS_DIR", "clips"))
+    clips_dir: Path = _resolve(os.getenv("SENTINEL_CLIPS_DIR", "sentinel/recordings"))
 
     #example, should be changed 
     api_url: str = os.getenv("SENTINEL_API_URL", "http://127.0.0.1:8000/api/v1")

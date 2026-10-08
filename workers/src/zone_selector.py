@@ -3,7 +3,7 @@ import json
 import numpy as np
 
 from config import settings
-
+#made for video cameras 
 VIDEO_PATH = settings.capture_source()
 CONFIG_PATH = settings.zone_config
 

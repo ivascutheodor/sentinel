@@ -1,5 +1,7 @@
 from datetime import datetime 
 from fastapi import FastAPI, HTTPException, status 
+from pathlib import Path
+from fastapi.responses import FileResponse
 #ce fac HTTPException si status
 from pydantic import BaseModel, Field
 
@@ -21,6 +23,12 @@ class EventResponse(BaseModel):
 #TREBUIE FACUTA URMATOAREA MODIFICARE IN RECORDER.PY:
 #În _start() nu mai pui niciun apel de rețea. Lași OpenCV să scrie cadrele pe disc în liniște.
 #În _finish() pui singurul apel, declanșat doar când fișierul .mp4 este finalizat complet:
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+RECORDINGS_DIR = PROJECT_ROOT / "recordings"
+RECORDINGS_DIR.mkdir(parents=True, exist_ok=True)
+
+
 
 @app.post("/api/v1/events", response_model=EventResponse,
           status_code=status.HTTP_201_CREATED,
@@ -54,3 +62,22 @@ def delete_event(event_id: int):
         raise HTTPException(status_code=404, detail="Event not found.")
     del fake_db[event_id]
     return None
+
+
+@app.get("/api/v1/videos/{filename}")
+def get_video(filename: str):
+    video_path = RECORDINGS_DIR / filename
+    try:
+        if not video_path.resolve().is_relative_to(RECORDINGS_DIR.resolve()):
+            raise HTTPException(status_code=400, detail="Invalid path to video")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Error at parsing the path")
+    if not video_path.is_file():
+        raise HTTPException(status_code=404, detail="Clip not found on disk")
+
+    return FileResponse(
+        path=video_path,
+        media_type="video/mp4",
+        filename=filename
+    )
+    pass
