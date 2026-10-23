@@ -94,7 +94,9 @@ class IncidentRecorder:
                 }
                 url = f"{settings.api_url}/events"
                 # Folosim POST (sau PATCH, iti va confirma colegul cand are ruta gata)
-                response = requests.post(url, json=payload, timeout=2.0)
+                response = requests.post(
+                    url, json=payload, headers={"X-API-Key": settings.api_key}, timeout=2.0
+                )
                 response.raise_for_status()
                 print(f"[API] Saved incident. Saved clip at: {clip}")
             except requests.exceptions.RequestException as e:

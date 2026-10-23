@@ -30,6 +30,8 @@ class Settings:
     #example, should be changed 
     api_url: str = os.getenv("SENTINEL_API_URL", "http://127.0.0.1:8000/api/v1")
     camera_id: str = os.getenv("SENTINEL_CAMERA_ID", "test_camera_01")
+    # Must match WORKER_API_KEY in backend/.env
+    api_key: str = os.getenv("SENTINEL_API_KEY", "")
 
 
     pre_roll_seconds: float = float(os.getenv("SENTINEL_PRE_ROLL_SECONDS", "5"))
