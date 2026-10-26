@@ -87,7 +87,7 @@ behavior. The current migration does not implement those protections, and
 ## Run the API
 
 ```bash
-uv run fastapi dev app/main.py --host 0.0.0.0
+uv run fastapi dev server/server.py --host 0.0.0.0
 ```
 
 The API runs on port `8000` by default.

@@ -58,18 +58,6 @@ class IncidentRecorder:
                 self._writer.write(raw_frame)
             elif self._presence_counter >= self._min_presence_frames:
                 self._start()
-                #payload is sent to the server via API 
-                try:
-                    payload = {
-                        "camera_id": settings.camera_id,
-                        "status": "capturing",
-                        "message": "Person insider the perimeter!"
-                    }
-                    url = f"{settings.api_url}/events"
-                    requests.post(url, json=payload, timeout=2.0)
-                    print("[API] Recording has started.")
-                except requests.exceptions.RequestException as e:
-                    print(f"[API Eroare] Backend is down, but recording is still on: {e}")
             return None
 
         self._presence_counter = 0
@@ -102,11 +90,14 @@ class IncidentRecorder:
             try:
                 payload = {
                     "camera_id": settings.camera_id,
-                    "video_path": str(clip)  # file path
+                    "video_path": clip.name  # file path
                 }
                 url = f"{settings.api_url}/events"
                 # Folosim POST (sau PATCH, iti va confirma colegul cand are ruta gata)
-                requests.post(url, json=payload, timeout=2.0)
+                response = requests.post(
+                    url, json=payload, headers={"X-API-Key": settings.api_key}, timeout=2.0
+                )
+                response.raise_for_status()
                 print(f"[API] Saved incident. Saved clip at: {clip}")
             except requests.exceptions.RequestException as e:
                 print(f"[API Error] Error, couldn't save the clip: {e}")

@@ -33,8 +33,8 @@ class User(Base):
             name="display_name",
         ),
         CheckConstraint(
-            "email = lower(btrim(email)) AND length(email) BETWEEN 3 AND 254",
-            name="email",
+            "username ~ '^[a-z0-9._-]{3,50}$'",
+            name="username",
         ),
         CheckConstraint(
             "length(btrim(password_hash)) > 0",
@@ -61,7 +61,7 @@ class User(Base):
         nullable=False,
     )
 
-    email: Mapped[str] = mapped_column(
+    username: Mapped[str] = mapped_column(
         Text,
         nullable=False,
         unique=True,
