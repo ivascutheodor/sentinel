@@ -20,8 +20,6 @@ export function DashboardShell() {
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
   const [visibleIds, setVisibleIds] = useState<string[] | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
-  const [showBoxes, setShowBoxes] = useState(true)
-  const [showZones, setShowZones] = useState(true)
   const refresh = useCallback(() => setRevision(value => value + 1), [])
 
   useEffect(() => {
@@ -65,13 +63,10 @@ export function DashboardShell() {
   }, [])
 
   if (needsLogin) return <Login onSuccess={() => { setVisibleIds(null); setNeedsLogin(false); refresh() }} />
-  if (!data) return <main className="flex min-h-dvh items-center justify-center p-6"><div className="max-w-md space-y-4">
-    <h1 className="text-xl font-semibold">{error ? 'Dashboard unavailable' : 'Connecting to Sentinel…'}</h1>
-    <p role={error ? 'alert' : 'status'} className="text-sm text-muted-foreground">{error || 'Loading your cameras and recent events.'}</p>
-    {error && <button onClick={refresh} className="rounded-lg border bg-surface px-4 py-2 text-sm hover:bg-surface-hover">Try again</button>}
-  </div></main>
-
-  const { cameras, events, user } = data
+  const cameras = data?.cameras ?? []
+  const events = data?.events ?? []
+  const user = data?.user
+  const loading = !data && !error
   const unreviewed = events.filter(event => !event.reviewed).length
   const ids = (visibleIds ?? []).filter(id => cameras.some(camera => camera.id === id))
   const selectedEvent = events.find(event => event.id === selectedEventId)
@@ -86,18 +81,19 @@ export function DashboardShell() {
   return <div className="flex h-dvh min-h-[560px] w-full overflow-hidden bg-background">
     <Sidebar user={user} section={section} onNavigate={setSection} onSignOut={signOut} />
     <div className="flex min-w-0 flex-1 flex-col">
-      <Header user={user} cameras={cameras} clock={clock} unreviewedCount={unreviewed} onSignOut={signOut} onOpenEvents={() => { setEventsOpen(true); setSection('events') }} />
-      {error && <div role="alert" className="border-b bg-panel px-4 py-3 text-sm text-critical">{error}<button onClick={() => setError('')} className="ml-4 underline">Dismiss</button></div>}
+      <Header user={user} clock={clock} unreviewedCount={unreviewed} onSignOut={signOut} onOpenEvents={() => { setEventsOpen(true); setSection('events') }} />
+      {error && <div role="alert" className="border-b bg-panel px-4 py-3 text-sm text-muted-foreground">{error}<button onClick={refresh} className="ml-4 underline">Try again</button></div>}
+      {loading && <p role="status" className="border-b bg-panel px-4 py-3 text-sm text-muted-foreground">Loading dashboard data…</p>}
       <main className="relative flex min-h-0 flex-1">
-        {section === 'cameras' && user.role === 'administrator' ? <CameraSettings cameras={cameras} onChange={() => { setVisibleIds(null); refresh() }} />
-          : section !== 'events' && (cameras.length ? <CameraWorkspace cameras={cameras} visibleIds={ids} onVisibleChange={setVisibleIds} expandedId={expandedId} onExpand={setExpandedId} clock={clock} showBoxes={showBoxes} showZones={showZones} onToggleBoxes={() => setShowBoxes(value => !value)} onToggleZones={() => setShowZones(value => !value)} highlightedCameraId={eventsOpen ? selectedEvent?.cameraId ?? null : null} eventsOpen={eventsOpen} unreviewedCount={unreviewed} onOpenEvents={() => setEventsOpen(true)} />
+        {section === 'cameras' && user?.role === 'administrator' ? <CameraSettings cameras={cameras} onChange={() => { setVisibleIds(null); refresh() }} />
+          : section !== 'events' && (cameras.length ? <CameraWorkspace cameras={cameras} visibleIds={ids} onVisibleChange={setVisibleIds} expandedId={expandedId} onExpand={setExpandedId} highlightedCameraId={eventsOpen ? selectedEvent?.cameraId ?? null : null} eventsOpen={eventsOpen} unreviewedCount={unreviewed} onOpenEvents={() => setEventsOpen(true)} />
           : <section className="flex min-w-0 flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
               <VideoOff className="size-8 text-muted-foreground" aria-hidden="true" />
-              <h2 className="text-lg font-semibold">{user.role === 'administrator' ? 'No cameras configured' : 'No cameras assigned'}</h2>
-              <p className="max-w-sm text-sm text-muted-foreground">{user.role === 'administrator' ? 'Add a camera to start viewing real footage.' : 'Ask your administrator to assign a camera to your account.'}</p>
-              {user.role === 'administrator' && <button onClick={() => setSection('cameras')} className="mt-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground">Add camera</button>}
+              <h2 className="text-lg font-semibold">{loading ? 'Loading cameras…' : error ? 'Camera data could not be loaded' : 'No cameras connected'}</h2>
+              <p className="max-w-sm text-sm text-muted-foreground">{loading ? 'Your cameras will appear here when available.' : error ? 'Check the data connection and try again.' : 'Connected cameras will appear here.'}</p>
+              {data && user?.role === 'administrator' && <button onClick={() => setSection('cameras')} className="mt-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground">Add camera</button>}
             </section>)}
-        {section !== 'cameras' && <EventsPanel cameras={cameras} open={section === 'events' || eventsOpen} fullWidth={section === 'events'} events={events} clock={clock} selectedId={selectedEventId} onSelect={setSelectedEventId} onClose={() => { setEventsOpen(false); setSection('dashboard') }} onMarkReviewed={review} onViewCamera={focusCamera} onViewAll={() => setSection('events')} />}
+        {section !== 'cameras' && <EventsPanel loading={loading} loadError={!data && Boolean(error)} cameras={cameras} open={section === 'events' || eventsOpen} fullWidth={section === 'events'} events={events} clock={clock} selectedId={selectedEventId} onSelect={setSelectedEventId} onClose={() => { setEventsOpen(false); setSection('dashboard') }} onMarkReviewed={review} onViewCamera={focusCamera} onViewAll={() => setSection('events')} />}
       </main>
     </div>
   </div>

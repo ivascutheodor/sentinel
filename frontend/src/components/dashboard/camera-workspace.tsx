@@ -2,7 +2,6 @@
 
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import {
-  Box,
   Check,
   ChevronDown,
   Columns2,
@@ -11,9 +10,8 @@ import {
   PanelRightOpen,
   Square,
   Video,
-  Hexagon,
 } from 'lucide-react'
-import { cameraAlertLevel, type Camera } from '@/lib/data'
+import type { Camera } from '@/lib/data'
 import { cn } from '@/lib/utils'
 import { CameraTile } from './camera-tile'
 
@@ -37,11 +35,6 @@ interface CameraWorkspaceProps {
   onVisibleChange: (ids: string[]) => void
   expandedId: string | null
   onExpand: (id: string | null) => void
-  clock: number
-  showBoxes: boolean
-  showZones: boolean
-  onToggleBoxes: () => void
-  onToggleZones: () => void
   highlightedCameraId: string | null
   eventsOpen: boolean
   unreviewedCount: number
@@ -54,11 +47,6 @@ export function CameraWorkspace({
   onVisibleChange,
   expandedId,
   onExpand,
-  clock,
-  showBoxes,
-  showZones,
-  onToggleBoxes,
-  onToggleZones,
   highlightedCameraId,
   eventsOpen,
   unreviewedCount,
@@ -73,8 +61,7 @@ export function CameraWorkspace({
       label: 'Single',
       icon: Square,
       ids: () => {
-        const alerting = cameras.find((c) => cameraAlertLevel(c) === 'critical')
-        return cameras.length ? [(alerting ?? cameras[0]).id] : []
+        return cameras.length ? [cameras[0].id] : []
       },
       active: visible.length === 1,
     },
@@ -110,7 +97,6 @@ export function CameraWorkspace({
     }
   }
 
-  const hasOverlays = cameras.some(camera => camera.zones.length || camera.detections.length)
   const { cols, rows } = gridFor(visible.length)
 
   return (
@@ -208,20 +194,6 @@ export function CameraWorkspace({
         </DropdownMenu.Root>
 
         <div className="ml-auto flex items-center gap-2">
-          <div hidden={!hasOverlays} role="group" aria-label="Overlays" className="flex items-center gap-1">
-            <OverlayToggle
-              pressed={showBoxes}
-              onClick={onToggleBoxes}
-              icon={Box}
-              label="Detections"
-            />
-            <OverlayToggle
-              pressed={showZones}
-              onClick={onToggleZones}
-              icon={Hexagon}
-              label="Zones"
-            />
-          </div>
           {!eventsOpen && (
             <button
               type="button"
@@ -248,9 +220,6 @@ export function CameraWorkspace({
               key={`focus-${expanded.id}`}
               camera={expanded}
               variant="focus"
-              clock={clock}
-              showBoxes={showBoxes}
-              showZones={showZones}
               highlighted={highlightedCameraId === expanded.id}
               onCollapse={() => onExpand(null)}
               className="flex-1"
@@ -264,9 +233,6 @@ export function CameraWorkspace({
                       key={`strip-${c.id}`}
                       camera={c}
                       variant="strip"
-                      clock={clock}
-                      showBoxes={showBoxes}
-                      showZones={showZones}
                       onSelect={() => onExpand(c.id)}
                       className="aspect-video h-full shrink-0"
                     />
@@ -288,9 +254,6 @@ export function CameraWorkspace({
                 key={camera.id}
                 camera={camera}
                 variant="grid"
-                clock={clock}
-                showBoxes={showBoxes}
-                showZones={showZones}
                 highlighted={highlightedCameraId === camera.id}
                 onExpand={() => onExpand(camera.id)}
                 className={cn(visible.length === 3 && i === 0 && 'row-span-2')}
@@ -300,35 +263,5 @@ export function CameraWorkspace({
         )}
       </div>
     </section>
-  )
-}
-
-function OverlayToggle({
-  pressed,
-  onClick,
-  icon: Icon,
-  label,
-}: {
-  pressed: boolean
-  onClick: () => void
-  icon: React.ComponentType<{ className?: string }>
-  label: string
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={pressed}
-      title={`${pressed ? 'Hide' : 'Show'} ${label.toLowerCase()}`}
-      className={cn(
-        'flex items-center gap-1.5 rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors',
-        pressed
-          ? 'border-primary/40 bg-primary/10 text-primary'
-          : 'border-border bg-surface text-muted-foreground hover:text-foreground',
-      )}
-    >
-      <Icon className="size-3.5" aria-hidden="true" />
-      <span className="hidden lg:inline">{label}</span>
-    </button>
   )
 }

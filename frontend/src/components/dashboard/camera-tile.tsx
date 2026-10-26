@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils'
 
 export type TileVariant = 'grid' | 'focus' | 'strip'
 interface CameraTileProps {
-  camera: Camera; variant: TileVariant; clock: number; showBoxes: boolean; showZones: boolean
+  camera: Camera; variant: TileVariant
   highlighted?: boolean; onExpand?: () => void; onCollapse?: () => void; onSelect?: () => void; className?: string
 }
 

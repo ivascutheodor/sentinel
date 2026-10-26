@@ -11,6 +11,8 @@ import { Snapshot } from './snapshot'
 interface EventsPanelProps {
   cameras: Camera[]
   fullWidth?: boolean
+  loading?: boolean
+  loadError?: boolean
   onViewAll: () => void
   open: boolean
   events: SecurityEvent[]
@@ -25,6 +27,8 @@ interface EventsPanelProps {
 export function EventsPanel({
   cameras,
   fullWidth,
+  loading,
+  loadError,
   onViewAll,
   open,
   events,
@@ -104,7 +108,7 @@ export function EventsPanel({
             <ul className="thin-scroll min-h-0 flex-1 divide-y divide-border/60 overflow-y-auto">
               {list.length === 0 && (
                 <li className="px-4 py-10 text-center text-sm text-muted-foreground">
-                  {filter === 'all' ? 'No recorded events yet.' : 'No unreviewed events.'}
+                  {loading ? 'Loading events…' : loadError ? 'Events could not be loaded.' : filter === 'all' ? 'No recorded events yet.' : 'No unreviewed events.'}
                 </li>
               )}
               {list.map((event) => {
