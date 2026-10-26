@@ -6,20 +6,20 @@
   --font-geist-sans: 'Geist Variable';
   --font-geist-mono: 'Geist Mono Variable';
   color-scheme: dark;
-  --background: #060a12;
-  --panel: #0a101c;
-  --surface: #0f1829;
-  --surface-hover: #14213a;
-  --border: #1a2540;
-  --border-strong: #2a3a60;
-  --foreground: #e7ecf6;
-  --muted-foreground: #8190ad;
-  --primary: #22d3c5;
-  --primary-foreground: #031f1c;
-  --info: #5aa9ff;
-  --success: #34d399;
-  --warning: #f5a524;
-  --critical: #f0524f;
+  --background: #080808;
+  --panel: #101010;
+  --surface: #191919;
+  --surface-hover: #242424;
+  --border: #2a2a2a;
+  --border-strong: #454545;
+  --foreground: #ededed;
+  --muted-foreground: #a3a3a3;
+  --primary: #d4d4d4;
+  --primary-foreground: #111111;
+  --info: #b3b3b3;
+  --success: #8fbc9b;
+  --warning: #d6b274;
+  --critical: #dc8585;
 }
 
 @theme inline {
@@ -63,16 +63,24 @@
     outline: 2px solid var(--primary);
     outline-offset: 2px;
   }
+  ::selection {
+    background: var(--primary);
+    color: var(--primary-foreground);
+  }
+  input,
+  textarea {
+    caret-color: var(--primary);
+  }
 }
 
 @keyframes alert-pulse-warning {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(245, 165, 36, 0), inset 0 0 0 1px rgba(245, 165, 36, 0.55); }
-  50% { box-shadow: 0 0 22px 0 rgba(245, 165, 36, 0.28), inset 0 0 0 1px rgba(245, 165, 36, 0.9); }
+  0%, 100% { box-shadow: 0 0 0 0 transparent, inset 0 0 0 1px color-mix(in srgb, var(--warning) 55%, transparent); }
+  50% { box-shadow: 0 0 22px 0 color-mix(in srgb, var(--warning) 28%, transparent), inset 0 0 0 1px color-mix(in srgb, var(--warning) 90%, transparent); }
 }
 
 @keyframes alert-pulse-critical {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(240, 82, 79, 0), inset 0 0 0 1px rgba(240, 82, 79, 0.6); }
-  50% { box-shadow: 0 0 26px 0 rgba(240, 82, 79, 0.34), inset 0 0 0 1px rgba(240, 82, 79, 0.95); }
+  0%, 100% { box-shadow: 0 0 0 0 transparent, inset 0 0 0 1px color-mix(in srgb, var(--critical) 60%, transparent); }
+  50% { box-shadow: 0 0 26px 0 color-mix(in srgb, var(--critical) 34%, transparent), inset 0 0 0 1px color-mix(in srgb, var(--critical) 95%, transparent); }
 }
 
 @keyframes live-dot {
@@ -86,7 +94,7 @@
 }
 
 @keyframes event-in {
-  from { opacity: 0; transform: translateY(-8px); background-color: rgba(34, 211, 197, 0.14); }
+  from { opacity: 0; transform: translateY(-8px); background-color: color-mix(in srgb, var(--primary) 14%, transparent); }
   to { opacity: 1; transform: translateY(0); }
 }
 
@@ -108,8 +116,8 @@
 
 .no-signal-pattern {
   background-image:
-    linear-gradient(rgba(129, 144, 173, 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(129, 144, 173, 0.06) 1px, transparent 1px);
+    linear-gradient(color-mix(in srgb, var(--muted-foreground) 6%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--muted-foreground) 6%, transparent) 1px, transparent 1px);
   background-size: 24px 24px;
 }
 
