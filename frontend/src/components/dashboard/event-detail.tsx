@@ -3,6 +3,7 @@ import { type Camera, type SecurityEvent } from '@/lib/data'
 import { formatAgo, formatClock } from '@/lib/utils'
 import { SeverityBadge } from './severity'
 import { Snapshot } from './snapshot'
+import { RecordingPlayer } from './recording-player'
 
 interface EventDetailProps {
   cameras: Camera[]
@@ -74,7 +75,7 @@ export function EventDetail({ cameras, event, clock, onBack, onMarkReviewed, onV
         </dl>
 
         {event.clips.map(clip => <div key={clip.id}>
-          {clip.url ? <video controls preload="metadata" src={clip.url} className="w-full rounded-lg bg-black" aria-label="Event recording" />
+          {clip.url ? <RecordingPlayer url={clip.url} />
             : <p className="text-sm text-muted-foreground">Recording {clip.status === 'ready' ? 'expired' : clip.status}.</p>}
         </div>)}
         {!event.clips.length && <p className="text-sm text-muted-foreground">No recording is available for this event.</p>}

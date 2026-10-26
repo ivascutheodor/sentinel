@@ -1,11 +1,10 @@
 import { LayoutDashboard, ListChecks, ShieldCheck, Video } from 'lucide-react'
 import type { User } from '@/lib/data'
 import { cn } from '@/lib/utils'
-import { UserMenu } from './user-menu'
 
-export type Section = 'dashboard' | 'cameras' | 'events'
-export function Sidebar({ user, section, onNavigate, onSignOut }: {
-  user?: User; section: Section; onNavigate: (section: Section) => void; onSignOut: () => void
+export type Section = 'dashboard' | 'cameras' | 'events' | 'settings'
+export function Sidebar({ user, section, onNavigate }: {
+  user?: User; section: Section; onNavigate: (section: Section) => void
 }) {
   const items = [
     { key: 'dashboard' as const, label: 'Dashboard', icon: LayoutDashboard },
@@ -17,6 +16,5 @@ export function Sidebar({ user, section, onNavigate, onSignOut }: {
     <nav aria-label="Primary" className="flex-1 space-y-1 overflow-y-auto px-2.5 py-4">
       {items.map(item => <button key={item.key} onClick={() => onNavigate(item.key)} aria-current={section === item.key ? 'page' : undefined} title={item.label} className={cn('flex w-full items-center justify-center gap-3 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors xl:justify-start', section === item.key ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-surface hover:text-foreground')}><item.icon className="size-[18px] shrink-0" aria-hidden="true" /><span className="sr-only xl:not-sr-only">{item.label}</span></button>)}
     </nav>
-    {user && <div className="border-t p-2.5"><UserMenu user={user} onSignOut={onSignOut} variant="sidebar" /></div>}
   </aside>
 }

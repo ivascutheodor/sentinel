@@ -126,7 +126,31 @@
   scrollbar-color: var(--border-strong) transparent;
 }
 
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+.skeleton {
+  background: var(--surface-hover);
+  animation: skeleton-pulse 1.8s ease-in-out infinite;
+}
+
+.skeleton-static {
+  animation: none;
+  opacity: 0.55;
+}
+
+:root[data-reduce-animations="true"] *,
+:root[data-reduce-animations="true"] *::before,
+:root[data-reduce-animations="true"] *::after {
+  animation: none !important;
+  transition: none !important;
+  scroll-behavior: auto !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .skeleton,
   .animate-alert-warning,
   .animate-alert-critical,
   .animate-live-dot,

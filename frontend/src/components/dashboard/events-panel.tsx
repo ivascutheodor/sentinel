@@ -7,6 +7,7 @@ import { cn, formatAgo, formatClock } from '@/lib/utils'
 import { EventDetail } from './event-detail'
 import { SeverityBadge, SEVERITY_META } from './severity'
 import { Snapshot } from './snapshot'
+import { EventListSkeleton } from './loading'
 
 interface EventsPanelProps {
   cameras: Camera[]
@@ -48,13 +49,14 @@ export function EventsPanel({
     <aside
       aria-label="Recent events"
       aria-hidden={!open}
+      aria-busy={Boolean(loading)}
       inert={!open}
       className={cn(
         'absolute inset-y-0 right-0 z-30 shrink-0 overflow-hidden border-l bg-panel transition-[width] duration-300 ease-out lg:relative lg:z-auto',
         fullWidth ? 'relative w-full' : open ? 'w-[min(22rem,100%)]' : 'w-0 border-l-0',
       )}
     >
-      <div className={cn("flex h-full flex-col", fullWidth ? "w-full" : "w-[min(22rem,100vw)]")}>
+      <div className="flex h-full w-full flex-col">
         <header className="flex items-center justify-between gap-2 border-b px-4 py-3">
           <div className="flex items-center gap-2">
             <Bell className="size-4 text-muted-foreground" aria-hidden="true" />
@@ -75,7 +77,7 @@ export function EventsPanel({
           </button>
         </header>
 
-        {selected ? (
+        {loading || loadError ? <EventListSkeleton loading={Boolean(loading)} /> : selected ? (
           <EventDetail
             event={selected}
             cameras={cameras}
@@ -108,7 +110,7 @@ export function EventsPanel({
             <ul className="thin-scroll min-h-0 flex-1 divide-y divide-border/60 overflow-y-auto">
               {list.length === 0 && (
                 <li className="px-4 py-10 text-center text-sm text-muted-foreground">
-                  {loading ? 'Loading events…' : loadError ? 'Events could not be loaded.' : filter === 'all' ? 'No recorded events yet.' : 'No unreviewed events.'}
+                  {filter === 'all' ? 'No recorded events yet.' : 'No unreviewed events.'}
                 </li>
               )}
               {list.map((event) => {
@@ -173,7 +175,7 @@ export function EventsPanel({
           </>
         )}
 
-        <footer className="border-t p-3">
+        {!loading && !loadError && <footer className="border-t p-3">
           <button
             type="button"
             onClick={onViewAll}
@@ -182,7 +184,7 @@ export function EventsPanel({
             View all events
             <ArrowRight className="size-4" aria-hidden="true" />
           </button>
-        </footer>
+        </footer>}
       </div>
     </aside>
   )
