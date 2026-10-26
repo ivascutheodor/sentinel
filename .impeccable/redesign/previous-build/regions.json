@@ -1,0 +1,238 @@
+{
+  "regions": [
+    {
+      "id": "application-ground",
+      "kind": "chrome",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "w": 1,
+        "h": 1
+      },
+      "container": true,
+      "note": "One flat pale-gray application background beneath individually named content and controls"
+    },
+    {
+      "id": "sidebar",
+      "kind": "chrome",
+      "grid": "A0:B9",
+      "box": {
+        "x": 0.0,
+        "y": 0.0,
+        "w": 0.1273644388398487,
+        "h": 1.0
+      },
+      "note": "Navy navigation rail; flat surface"
+    },
+    {
+      "id": "brand",
+      "kind": "text",
+      "grid": "A0:B0",
+      "box": {
+        "x": 0.03909205548549811,
+        "y": 0.02721774193548387,
+        "w": 0.0712484237074401,
+        "h": 0.023185483870967742
+      },
+      "note": "SENTINEL brand label"
+    },
+    {
+      "id": "navigation",
+      "kind": "control",
+      "grid": "A1:B2",
+      "box": {
+        "x": 0.005674653215636823,
+        "y": 0.08669354838709678,
+        "w": 0.11601513240857503,
+        "h": 0.10483870967741936
+      },
+      "note": "Overview and Events navigation buttons"
+    },
+    {
+      "id": "account",
+      "kind": "control",
+      "grid": "A9:B9",
+      "box": {
+        "x": 0.012610340479192938,
+        "y": 0.9294354838709677,
+        "w": 0.10151324085750316,
+        "h": 0.05342741935483871
+      },
+      "note": "Operator account control"
+    },
+    {
+      "id": "page-heading",
+      "kind": "text",
+      "grid": "B0:C0",
+      "box": {
+        "x": 0.14312736443883986,
+        "y": 0.023185483870967742,
+        "w": 0.1034047919293821,
+        "h": 0.03326612903225806
+      },
+      "note": "Overview heading"
+    },
+    {
+      "id": "demo-meta",
+      "kind": "text",
+      "grid": "H0:J0",
+      "box": {
+        "x": 0.7969735182849937,
+        "y": 0.02620967741935484,
+        "w": 0.18474148802017654,
+        "h": 0.024193548387096774
+      },
+      "note": "Demo data and current example time"
+    },
+    {
+      "id": "camera01-title",
+      "kind": "text",
+      "grid": "B1:C1",
+      "box": {
+        "x": 0.148171500630517,
+        "y": 0.09979838709677419,
+        "w": 0.1235813366960908,
+        "h": 0.029233870967741934
+      },
+      "note": "Storage room 01"
+    },
+    {
+      "id": "camera01-status",
+      "kind": "text",
+      "grid": "D1:F1",
+      "box": {
+        "x": 0.31273644388398486,
+        "y": 0.09979838709677419,
+        "w": 0.21626733921815888,
+        "h": 0.02721774193548387
+      },
+      "note": "Live and detection state plus last-frame time"
+    },
+    {
+      "id": "camera01",
+      "kind": "image",
+      "grid": "B1:F4",
+      "box": {
+        "x": 0.14312736443883986,
+        "y": 0.14012096774193547,
+        "w": 0.39407313997477933,
+        "h": 0.3467741935483871
+      },
+      "bleed": true,
+      "plate": "frontend/public/demo/storage-room-01.png",
+      "note": "Photographic storage room aisle, a person seen from behind walking between metal shelves of boxes; no text or overlays"
+    },
+    {
+      "id": "camera02-title",
+      "kind": "text",
+      "grid": "F1:G1",
+      "box": {
+        "x": 0.5718789407313998,
+        "y": 0.09979838709677419,
+        "w": 0.12484237074401008,
+        "h": 0.029233870967741934
+      },
+      "note": "Storage room 02"
+    },
+    {
+      "id": "camera02-status",
+      "kind": "text",
+      "grid": "H1:J1",
+      "box": {
+        "x": 0.7610340479192939,
+        "y": 0.09979838709677419,
+        "w": 0.212484237074401,
+        "h": 0.02721774193548387
+      },
+      "note": "Live and detection state plus last-frame time"
+    },
+    {
+      "id": "camera02",
+      "kind": "image",
+      "grid": "F1:J4",
+      "box": {
+        "x": 0.5668348045397226,
+        "y": 0.14012096774193547,
+        "w": 0.4123581336696091,
+        "h": 0.3467741935483871
+      },
+      "bleed": true,
+      "plate": "frontend/public/demo/storage-room-02.png",
+      "note": "Photographic empty storage room with shelves, gray floor, carts and boxes; no text or overlays"
+    },
+    {
+      "id": "events-heading",
+      "kind": "text",
+      "grid": "B5:C5",
+      "box": {
+        "x": 0.14438839848675913,
+        "y": 0.5493951612903226,
+        "w": 0.10655737704918032,
+        "h": 0.028225806451612902
+      },
+      "note": "Recent events heading"
+    },
+    {
+      "id": "event-filters",
+      "kind": "control",
+      "grid": "C5:F5",
+      "box": {
+        "x": 0.29508196721311475,
+        "y": 0.5423387096774194,
+        "w": 0.31399747793190413,
+        "h": 0.046370967741935484
+      },
+      "note": "Camera and time period native select controls"
+    },
+    {
+      "id": "event-table",
+      "kind": "control",
+      "grid": "B6:F8",
+      "box": {
+        "x": 0.14312736443883986,
+        "y": 0.5967741935483871,
+        "w": 0.467843631778058,
+        "h": 0.3286290322580645
+      },
+      "note": "Semantic table headers and three selectable event rows, with camera, type, capture and recording columns"
+    },
+    {
+      "id": "recorded-title",
+      "kind": "text",
+      "grid": "G5:J5",
+      "box": {
+        "x": 0.6349306431273645,
+        "y": 0.5483870967741935,
+        "w": 0.33669609079445145,
+        "h": 0.028225806451612902
+      },
+      "note": "Recorded Today 14:32, Storage room 01"
+    },
+    {
+      "id": "recording",
+      "kind": "image",
+      "grid": "G5:J8",
+      "box": {
+        "x": 0.6349306431273645,
+        "y": 0.5836693548387096,
+        "w": 0.3348045397225725,
+        "h": 0.2852822580645161
+      },
+      "bleed": true,
+      "plate": "frontend/public/demo/storage-room-01-recorded.png",
+      "note": "Photographic recorded view of storage-room aisle, person seen from behind; no UI, timestamps or overlays"
+    },
+    {
+      "id": "playback-controls",
+      "kind": "control",
+      "grid": "G8:J9",
+      "box": {
+        "x": 0.6349306431273645,
+        "y": 0.8689516129032258,
+        "w": 0.3348045397225725,
+        "h": 0.05342741935483871
+      },
+      "note": "Play, seek, elapsed time, mute and fullscreen media controls"
+    }
+  ]
+}

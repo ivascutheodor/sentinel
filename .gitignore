@@ -18,3 +18,19 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+
+# Synthetic sample recordings used by the frontend demo.
+!frontend/public/demo/*.mp4
+
+# Local design and browser verification artifacts.
+.impeccable/build/
+.impeccable/review/
+.impeccable/reference/
+.impeccable/mocks/*
+!.impeccable/mocks/decision/
+.impeccable/mocks/decision/*
+!.impeccable/mocks/decision/conventional-dashboard.png
+!.impeccable/mocks/decision/conventional-dashboard.json
+!.impeccable/mocks/decision/conventional-dashboard.txt
+.impeccable/assets/
+.impeccable/operator-dashboard-brief.txt

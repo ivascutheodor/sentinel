@@ -1,0 +1,129 @@
+DIRECTION CONCEPT SEED (key: 2c7fa1a5; mode: operate; source: api; approved pool: c3b204a1eed6; 306/564 human-approved; rerun with --scope direction --mode operate --from 2c7fa1a5 --candidate-count 7 to reproduce this roll against this catalog revision)
+ASSIGNED INDEX: 7
+  After ordering the grounded directions by resonance, build candidate
+  7 of your own grounded list; the assignment never points at a
+  challenger. The assignment is the roll, not a suggestion: your top-ranked
+  direction is what every run would ship, so the script decides which grounded
+  direction gets built. Each direction joins a durable visual system to a
+  concrete expression for the requested first surface, decided as one. It must
+  survive the current task plus navigation, quiet and dense content,
+  interaction and state, and a substantially different future surface. In an
+  attended run, present the assigned direction fully committed and offer
+  re-roll. You may add ONE card for your top-ranked grounded candidate when
+  it is not the assigned direction, kicker IMPECCABLE’S PICK, with an honest risk line
+  naming its familiarity; one pick card, never a ranked lineup, and the pick
+  never takes the lead position. When the assignment IS your top candidate,
+  there is no pick card. Re-roll yourself only
+  on named factual grounds, when the assignment cannot carry the product's
+  truth or task; taste is never grounds.
+  The assignment exists to refuse the model's ranking rut, never to outrank
+  the user or the brief. Never expose assignment metadata in user-facing labels.
+CHALLENGERS:
+  1. a metropolitan rail map fired as a midnight-blue enamel mural, where scarlet, cobalt, amber, and green lines bend at disciplined angles, interchange circles bloom at crossings, and the entire city becomes a legible promise of movement
+     SOURCE ID: wayfinding-cartography-signage-midnight-transit-diagram
+     CREATIVE SPARK: Under the station's white light, four colored lines meet in one porcelain interchange; a fingertip follows the scarlet route outward until the dense center opens toward the river.
+     SYSTEM GRAMMAR:
+       - Palette/material: midnight-blue enamel ground with porcelain white station ticks, scarlet, cobalt, amber, and green line inks, the chosen line burning brightest
+       - Type/composition: humanist transit sans in fixed-size station labels, lines bending only at 45 and 90 degrees, the diagram's discipline is the composition
+       - Topology/navigation: Organize movement by line, station order, branch, interchange, fare boundary, and destination rather than literal geographic distance.
+       - Controls/state: Trace, transfer, reverse, reroute, and compare journeys with open, arriving, delayed, suspended, crowded, and accessible states.
+       - Responsive/motion: Focus the chosen corridor while preserving transfer context; never shrink the whole network into an unreadable miniature.
+     WEB LEVERAGE: Live service state can recompute only affected routes and transfer promises, while deep-linked itineraries, native search, and offline caching preserve a usable journey beyond the mural.
+     QUALITY BAR: board https://impeccable.style/worlds/cards/wayfinding-cartography-signage-midnight-transit-diagram.webp · hero https://impeccable.style/worlds/cards/wayfinding-cartography-signage-midnight-transit-diagram-hero.webp
+  2. a software marketing surface built almost entirely in one neutral scale, near-black on near-white with a single restrained accent, dense product screenshots framed on subtle gradients and every claim paired with an interface detail proving it
+     SOURCE ID: digital-design-canon-monochrome-product-marketing
+     CREATIVE SPARK: Almost no color at all, one accent used maybe four times on the whole page, and every sentence immediately followed by a screenshot that proves it.
+     SYSTEM GRAMMAR:
+       - Palette/material: a fine neutral scale from near-white to near-black with one accent used sparingly, and screenshots framed on soft radial grounds
+       - Type/composition: a tight geometric sans at two weights, sentence-case headings, and a strict grid with generous vertical rhythm between claims
+       - Topology/navigation: sections alternate claim and proof, so navigation descends through paired assertions rather than a feature list
+       - Controls/state: controls are ghost buttons with a hairline border, the primary action fills solid in the accent, and secondary actions stay outline
+       - Responsive/motion: the grid folds from two columns to one preserving pair order, and motion is a soft rise as each proof enters
+     WEB LEVERAGE: a neutral scale as css custom properties, intersection-driven rise animation, and responsive claim-and-proof pairing
+     QUALITY BAR: board https://impeccable.style/worlds/cards/digital-design-canon-monochrome-product-marketing.webp · hero https://impeccable.style/worlds/cards/digital-design-canon-monochrome-product-marketing-hero.webp
+  3. a nineteenth-century lexicon page, black text set to a fixed measure with a shoulder margin down the outside, entries ranked by how much apparatus each one is granted rather than by size, guide words at the head naming the span you are inside, and every colour in the system quarantined inside a bordered plate
+     SOURCE ID: rw-lexicon-shoulder-and-plate
+     CREATIVE SPARK: A lexicon lying open at a spread where a chromolithographed mineral plate in seven inks faces a column of black text set so tight that two entries touch, and two words at the top of the page name the first and the last thing you can reach without turning it.
+     SYSTEM GRAMMAR:
+       - Palette/material: engraving black on warm uncoated cream stock; colour only inside a bordered plate: vermilion, chrome yellow, emerald, ultramarine, madder rose, sepia, violet.
+       - Type/composition: Miller Text at three sizes: body 16-17px on a 55-72 character measure, display 1.6 body, small 0.78. Twelve-unit module, two of shoulder, columns of five.
+       - Topology/navigation: a head rule carries two guide words, the first and last item in view, recomputed as content passes; the shoulder a thumb index, current range struck through.
+       - Controls/state: every control is a printed mark: a link closes in a solid arrow, pressed turns it down, visited takes a shoulder tick; rank is a hanging head plus a full rule.
+       - Responsive/motion: columns are whole 55-72 character measures; extra width goes to the shoulder and the plates, never the line. Motion is a page passing, never a fade.
+     WEB LEVERAGE: Guide words recomputed from the first and last entry in the viewport, column count derived from a character measure not breakpoints, plates as bordered figures for any foreign media, and a struck-and-replaced correction primitive.
+     QUALITY BAR: board https://impeccable.style/worlds/cards/rw-lexicon-shoulder-and-plate.webp · hero https://impeccable.style/worlds/cards/rw-lexicon-shoulder-and-plate-hero.webp
+  4. a celestial star atlas chart, magnitudes as ranked dot sizes on a coordinate sphere, constellation lines and mythic figures faint beneath the data
+     SOURCE ID: notation-diagram-systems-star-atlas
+     CREATIVE SPARK: Under a red flashlight at two in the morning, a cold thumb traces from the chart's inked dots up to the actual sky, and Orion's belt agrees with the paper exactly.
+     SYSTEM GRAMMAR:
+       - Palette/material: deep navy chart ground with chalk-white stars, red-flashlight amber for annotations, the object under the eye ringed in that same night-vision red
+       - Type/composition: light serif italic names the constellations, small tabular figures label coordinates, dot diameter carries the hierarchy the type declines to
+       - Topology/navigation: the sky splits into overlapping charts with matched edges, coordinates gridline the field and an index of named objects points into each plate
+       - Controls/state: importance is dot diameter on a fixed magnitude ramp, variable objects wear distinct rings, the mythic figure layer fades up only on request
+       - Responsive/motion: each plate crops around its brightest anchors at small sizes; panning drifts like slow sidereal motion
+     WEB LEVERAGE: Canvas plots thousands of magnitude-scaled points with smooth zoom between chart plates.
+     QUALITY BAR: board https://impeccable.style/worlds/cards/notation-diagram-systems-star-atlas.webp · hero https://impeccable.style/worlds/cards/notation-diagram-systems-star-atlas-hero.webp
+  5. a Wim Crouwel gridded type specimen, where letterforms are built cell by cell on a visible construction grid and the poster is the proof
+     SOURCE ID: crouwel-grid-specimen
+     CREATIVE SPARK: Faint blue gridlines cover the sheet like graph paper; enormous letterforms assemble themselves from its cells, and one diagonal is the only rebellion the system permits.
+     SYSTEM GRAMMAR:
+       - Palette/material: white or one stark saturated ground, faint construction-grid hairlines, one accent plane earned by the headline
+       - Type/composition: monumental grid-constructed letterforms over small neutral grotesk; the layout grid stays visible as part of the design
+       - Topology/navigation: Move by cell, by letter, and by catalog entry.
+       - Controls/state: Reveal construction, snap to cells, and toggle grid visibility as a real state.
+       - Responsive/motion: The page reflows by whole cells; letterforms rebuild cell by cell when content changes.
+     WEB LEVERAGE: CSS grid as the literal visible armature with display letterforms drawn from the same grid tokens
+     QUALITY BAR: board https://impeccable.style/worlds/cards/crouwel-grid-specimen.webp · hero https://impeccable.style/worlds/cards/crouwel-grid-specimen-hero.webp
+  6. A working field built as a darkroom printer's exposure record: overlapping translucent sheets over a backlit eleven-step zone ramp, where any region carries a hatch density and a stop-delta, and two hatches crossing at ninety degrees mark a conflict.
+     SOURCE ID: operate-b-exposure-record-zone-sheets
+     CREATIVE SPARK: A taped record card under the enlarger's glow: ruled boxes of seconds and M-filtration numbers, and a tracing-paper overlay askew on top where one region is hatched +1 1/3 and a corner is outlined to be held back.
+     SYSTEM GRAMMAR:
+       - Palette/material: Backlit neutrals snapped to an eleven-step zone ramp; one glowing dichroic magenta marks filtration only; hosted images sit in a two-step mask, never hatched.
+       - Type/composition: Legends in tracked condensed caps, quantities in tabular mono with 1/3 and 2/3 fractions; prose sits only on cleared light zones, hatching halting a line short.
+       - Topology/navigation: Stacked translucent sheets overlap at slight angles, each squared internally; navigating slides a sheet aside instead of replacing the field beneath.
+       - Controls/state: dotted outline is held back, deepest zone is selected, a struck rule is disabled, hatch density is load; two hatches crossing at ninety degrees is a conflict.
+       - Responsive/motion: Sheets carry mass, sliding with slight overshoot before settling; narrow widths stack them one per column with the zone wedge repeating at each band head.
+     WEB LEVERAGE: An eleven-step zone ramp as the only tonal tokens, plus a hatch layer where any region takes a numeric weight and a stop-delta, and overlapping regions cross-hatch so conflict renders without colour.
+     QUALITY BAR: board https://impeccable.style/worlds/cards/operate-b-exposure-record-zone-sheets.webp · hero https://impeccable.style/worlds/cards/operate-b-exposure-record-zone-sheets-hero.webp
+Fuse each challenger before judging it: the challenger supplies the form
+  and its system grammar, the product supplies every fact, and clarity wins
+  conflicts. Weigh the fused result against the assigned direction on exactly
+  two axes, audience identification and product clarity. Losing to strong
+  grounded material is a valid outcome; beating a thin or tool-monoculture
+  list is the point. A fused challenger that wins both axes becomes the build.
+  Close the weighing with a verdict per challenger, decided before any
+  borrowing is considered: wins (beats the assigned direction on both axes),
+  competitive (holds one axis), or declined (loses both). A declined
+  challenger is not spent: name the one discipline of its system the assigned
+  direction lacks, and raise the assigned direction to match before
+  presenting it. A donation transfers ambition and system discipline, never
+  the challenger's clothes; one world owns the page. Write each raise as its
+  own named line on the presented direction, and carry every verdict, kept
+  line, and raise into the decision page payload.
+When you can view images, open the QUALITY BAR board and hero for any
+challenger you weigh seriously and for the world you build. They exist as a
+craft bar, the finish level and commitment the build is expected to reach,
+never as a mockup to copy; your surface serves this product, not that render.
+PRODUCT.md and explicit incumbent brand commitments constrain every direction.
+The seed never chooses exact colors, fonts, tokens, or a user preference, and
+it never permits the world and first surface to be selected independently.
+The CREATIVE SPARK is a complete visual system, not a theme or decorative
+reference. Translate every supplied system rule into the product: palette and
+material, type and composition, topology, controls and states, and adaptation.
+Keep the source's visible character, scale, rhythm, and interaction instead of
+reducing vivid grammar to generic nouns. When the source is already a credible
+interface language, commit to it across navigation, content, controls, and
+states. Otherwise keep a literal carrier only when it becomes functional.
+Ambitious motion, spatial media, or interaction is welcome when it strengthens
+the product without weakening semantics, performance, or fallback behavior.
+TELEMETRY: after the user's choice resolves, rerun this script once with
+  --kind <assigned|pick|challenger|canon> --from 2c7fa1a5 --scope direction --mode operate,
+  adding --chosen <challenger-id> when a dealt challenger won and keeping
+  --register <safer|bolder> when the resolved round came from a steered hand.
+  One ping per resolved attended round. The ping is anonymous, the card kind
+  plus the catalog id when one won; your grounded candidates' names never
+  leave the machine, and the ping is skipped automatically when DO_NOT_TRACK
+  or IMPECCABLE_NO_TELEMETRY is set.
+A user- or brief-pinned decision beats the roll, always.
+ASSIGNED INDEX (restated for truncated readers): 7. Build candidate
+7 of your own grounded list; seed key 2c7fa1a5.

@@ -1,0 +1,619 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-15T11:39:27.612312Z",
+  "title": "Design System: Sentinel",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Primary",
+        "tonalRamp": [
+          "oklch(15.00% 0.21521 262.88)",
+          "oklch(26.43% 0.21521 262.88)",
+          "oklch(37.86% 0.21521 262.88)",
+          "oklch(49.29% 0.21521 262.88)",
+          "oklch(60.71% 0.21521 262.88)",
+          "oklch(72.14% 0.21521 262.88)",
+          "oklch(83.57% 0.21521 262.88)",
+          "oklch(95.00% 0.21521 262.88)"
+        ]
+      },
+      "primary-hover": {
+        "role": "primary",
+        "displayName": "Primary Hover",
+        "tonalRamp": [
+          "oklch(15.00% 0.21717 264.38)",
+          "oklch(26.43% 0.21717 264.38)",
+          "oklch(37.86% 0.21717 264.38)",
+          "oklch(49.29% 0.21717 264.38)",
+          "oklch(60.71% 0.21717 264.38)",
+          "oklch(72.14% 0.21717 264.38)",
+          "oklch(83.57% 0.21717 264.38)",
+          "oklch(95.00% 0.21717 264.38)"
+        ]
+      },
+      "selection": {
+        "role": "primary",
+        "displayName": "Selection",
+        "tonalRamp": [
+          "oklch(15.00% 0.02876 266.37)",
+          "oklch(26.43% 0.02876 266.37)",
+          "oklch(37.86% 0.02876 266.37)",
+          "oklch(49.29% 0.02876 266.37)",
+          "oklch(60.71% 0.02876 266.37)",
+          "oklch(72.14% 0.02876 266.37)",
+          "oklch(83.57% 0.02876 266.37)",
+          "oklch(95.00% 0.02876 266.37)"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Surface",
+        "tonalRamp": [
+          "oklch(15.00% 0.00000 0.00)",
+          "oklch(26.43% 0.00000 0.00)",
+          "oklch(37.86% 0.00000 0.00)",
+          "oklch(49.29% 0.00000 0.00)",
+          "oklch(60.71% 0.00000 0.00)",
+          "oklch(72.14% 0.00000 0.00)",
+          "oklch(83.57% 0.00000 0.00)",
+          "oklch(95.00% 0.00000 0.00)"
+        ]
+      },
+      "background": {
+        "role": "neutral",
+        "displayName": "Background",
+        "tonalRamp": [
+          "oklch(15.00% 0.00453 258.32)",
+          "oklch(26.43% 0.00453 258.32)",
+          "oklch(37.86% 0.00453 258.32)",
+          "oklch(49.29% 0.00453 258.32)",
+          "oklch(60.71% 0.00453 258.32)",
+          "oklch(72.14% 0.00453 258.32)",
+          "oklch(83.57% 0.00453 258.32)",
+          "oklch(95.00% 0.00453 258.32)"
+        ]
+      },
+      "text": {
+        "role": "neutral",
+        "displayName": "Text",
+        "tonalRamp": [
+          "oklch(15.00% 0.04314 258.29)",
+          "oklch(26.43% 0.04314 258.29)",
+          "oklch(37.86% 0.04314 258.29)",
+          "oklch(49.29% 0.04314 258.29)",
+          "oklch(60.71% 0.04314 258.29)",
+          "oklch(72.14% 0.04314 258.29)",
+          "oklch(83.57% 0.04314 258.29)",
+          "oklch(95.00% 0.04314 258.29)"
+        ]
+      },
+      "text-muted": {
+        "role": "neutral",
+        "displayName": "Text Muted",
+        "tonalRamp": [
+          "oklch(15.00% 0.03853 256.82)",
+          "oklch(26.43% 0.03853 256.82)",
+          "oklch(37.86% 0.03853 256.82)",
+          "oklch(49.29% 0.03853 256.82)",
+          "oklch(60.71% 0.03853 256.82)",
+          "oklch(72.14% 0.03853 256.82)",
+          "oklch(83.57% 0.03853 256.82)",
+          "oklch(95.00% 0.03853 256.82)"
+        ]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Border",
+        "tonalRamp": [
+          "oklch(15.00% 0.01264 255.51)",
+          "oklch(26.43% 0.01264 255.51)",
+          "oklch(37.86% 0.01264 255.51)",
+          "oklch(49.29% 0.01264 255.51)",
+          "oklch(60.71% 0.01264 255.51)",
+          "oklch(72.14% 0.01264 255.51)",
+          "oklch(83.57% 0.01264 255.51)",
+          "oklch(95.00% 0.01264 255.51)"
+        ]
+      },
+      "nav": {
+        "role": "neutral",
+        "displayName": "Nav",
+        "tonalRamp": [
+          "oklch(15.00% 0.04051 254.76)",
+          "oklch(26.43% 0.04051 254.76)",
+          "oklch(37.86% 0.04051 254.76)",
+          "oklch(49.29% 0.04051 254.76)",
+          "oklch(60.71% 0.04051 254.76)",
+          "oklch(72.14% 0.04051 254.76)",
+          "oklch(83.57% 0.04051 254.76)",
+          "oklch(95.00% 0.04051 254.76)"
+        ]
+      },
+      "nav-text": {
+        "role": "neutral",
+        "displayName": "Nav Text",
+        "tonalRamp": [
+          "oklch(15.00% 0.01260 255.51)",
+          "oklch(26.43% 0.01260 255.51)",
+          "oklch(37.86% 0.01260 255.51)",
+          "oklch(49.29% 0.01260 255.51)",
+          "oklch(60.71% 0.01260 255.51)",
+          "oklch(72.14% 0.01260 255.51)",
+          "oklch(83.57% 0.01260 255.51)",
+          "oklch(95.00% 0.01260 255.51)"
+        ]
+      },
+      "nav-hover": {
+        "role": "neutral",
+        "displayName": "Nav Hover",
+        "tonalRamp": [
+          "oklch(15.00% 0.04465 255.17)",
+          "oklch(26.43% 0.04465 255.17)",
+          "oklch(37.86% 0.04465 255.17)",
+          "oklch(49.29% 0.04465 255.17)",
+          "oklch(60.71% 0.04465 255.17)",
+          "oklch(72.14% 0.04465 255.17)",
+          "oklch(83.57% 0.04465 255.17)",
+          "oklch(95.00% 0.04465 255.17)"
+        ]
+      },
+      "secondary-text": {
+        "role": "primary",
+        "displayName": "Secondary Text",
+        "tonalRamp": [
+          "oklch(15.00% 0.13884 260.33)",
+          "oklch(26.43% 0.13884 260.33)",
+          "oklch(37.86% 0.13884 260.33)",
+          "oklch(49.29% 0.13884 260.33)",
+          "oklch(60.71% 0.13884 260.33)",
+          "oklch(72.14% 0.13884 260.33)",
+          "oklch(83.57% 0.13884 260.33)",
+          "oklch(95.00% 0.13884 260.33)"
+        ]
+      },
+      "secondary-surface": {
+        "role": "primary",
+        "displayName": "Secondary Surface",
+        "tonalRamp": [
+          "oklch(15.00% 0.01487 260.73)",
+          "oklch(26.43% 0.01487 260.73)",
+          "oklch(37.86% 0.01487 260.73)",
+          "oklch(49.29% 0.01487 260.73)",
+          "oklch(60.71% 0.01487 260.73)",
+          "oklch(72.14% 0.01487 260.73)",
+          "oklch(83.57% 0.01487 260.73)",
+          "oklch(95.00% 0.01487 260.73)"
+        ]
+      },
+      "secondary-hover": {
+        "role": "primary",
+        "displayName": "Secondary Hover",
+        "tonalRamp": [
+          "oklch(15.00% 0.03003 260.71)",
+          "oklch(26.43% 0.03003 260.71)",
+          "oklch(37.86% 0.03003 260.71)",
+          "oklch(49.29% 0.03003 260.71)",
+          "oklch(60.71% 0.03003 260.71)",
+          "oklch(72.14% 0.03003 260.71)",
+          "oklch(83.57% 0.03003 260.71)",
+          "oklch(95.00% 0.03003 260.71)"
+        ]
+      },
+      "current": {
+        "role": "semantic",
+        "displayName": "Current",
+        "tonalRamp": [
+          "oklch(15.00% 0.11173 155.14)",
+          "oklch(26.43% 0.11173 155.14)",
+          "oklch(37.86% 0.11173 155.14)",
+          "oklch(49.29% 0.11173 155.14)",
+          "oklch(60.71% 0.11173 155.14)",
+          "oklch(72.14% 0.11173 155.14)",
+          "oklch(83.57% 0.11173 155.14)",
+          "oklch(95.00% 0.11173 155.14)"
+        ]
+      },
+      "stale": {
+        "role": "semantic",
+        "displayName": "Stale",
+        "tonalRamp": [
+          "oklch(15.00% 0.10680 67.88)",
+          "oklch(26.43% 0.10680 67.88)",
+          "oklch(37.86% 0.10680 67.88)",
+          "oklch(49.29% 0.10680 67.88)",
+          "oklch(60.71% 0.10680 67.88)",
+          "oklch(72.14% 0.10680 67.88)",
+          "oklch(83.57% 0.10680 67.88)",
+          "oklch(95.00% 0.10680 67.88)"
+        ]
+      },
+      "failed": {
+        "role": "semantic",
+        "displayName": "Failed",
+        "tonalRamp": [
+          "oklch(15.00% 0.13275 25.92)",
+          "oklch(26.43% 0.13275 25.92)",
+          "oklch(37.86% 0.13275 25.92)",
+          "oklch(49.29% 0.13275 25.92)",
+          "oklch(60.71% 0.13275 25.92)",
+          "oklch(72.14% 0.13275 25.92)",
+          "oklch(83.57% 0.13275 25.92)",
+          "oklch(95.00% 0.13275 25.92)"
+        ]
+      },
+      "preparing": {
+        "role": "semantic",
+        "displayName": "Preparing",
+        "tonalRamp": [
+          "oklch(15.00% 0.09924 76.36)",
+          "oklch(26.43% 0.09924 76.36)",
+          "oklch(37.86% 0.09924 76.36)",
+          "oklch(49.29% 0.09924 76.36)",
+          "oklch(60.71% 0.09924 76.36)",
+          "oklch(72.14% 0.09924 76.36)",
+          "oklch(83.57% 0.09924 76.36)",
+          "oklch(95.00% 0.09924 76.36)"
+        ]
+      },
+      "unavailable": {
+        "role": "semantic",
+        "displayName": "Unavailable",
+        "tonalRamp": [
+          "oklch(15.00% 0.03706 258.37)",
+          "oklch(26.43% 0.03706 258.37)",
+          "oklch(37.86% 0.03706 258.37)",
+          "oklch(49.29% 0.03706 258.37)",
+          "oklch(60.71% 0.03706 258.37)",
+          "oklch(72.14% 0.03706 258.37)",
+          "oklch(83.57% 0.03706 258.37)",
+          "oklch(95.00% 0.03706 258.37)"
+        ]
+      },
+      "field-border": {
+        "role": "neutral",
+        "displayName": "Field Border",
+        "tonalRamp": [
+          "oklch(15.00% 0.02166 259.19)",
+          "oklch(26.43% 0.02166 259.19)",
+          "oklch(37.86% 0.02166 259.19)",
+          "oklch(49.29% 0.02166 259.19)",
+          "oklch(60.71% 0.02166 259.19)",
+          "oklch(72.14% 0.02166 259.19)",
+          "oklch(83.57% 0.02166 259.19)",
+          "oklch(95.00% 0.02166 259.19)"
+        ]
+      },
+      "field-text": {
+        "role": "neutral",
+        "displayName": "Field Text",
+        "tonalRamp": [
+          "oklch(15.00% 0.05137 258.66)",
+          "oklch(26.43% 0.05137 258.66)",
+          "oklch(37.86% 0.05137 258.66)",
+          "oklch(49.29% 0.05137 258.66)",
+          "oklch(60.71% 0.05137 258.66)",
+          "oklch(72.14% 0.05137 258.66)",
+          "oklch(83.57% 0.05137 258.66)",
+          "oklch(95.00% 0.05137 258.66)"
+        ]
+      },
+      "media-surface": {
+        "role": "neutral",
+        "displayName": "Media Surface",
+        "tonalRamp": [
+          "oklch(15.00% 0.03685 260.03)",
+          "oklch(26.43% 0.03685 260.03)",
+          "oklch(37.86% 0.03685 260.03)",
+          "oklch(49.29% 0.03685 260.03)",
+          "oklch(60.71% 0.03685 260.03)",
+          "oklch(72.14% 0.03685 260.03)",
+          "oklch(83.57% 0.03685 260.03)",
+          "oklch(95.00% 0.03685 260.03)"
+        ]
+      },
+      "media-text": {
+        "role": "neutral",
+        "displayName": "Media Text",
+        "tonalRamp": [
+          "oklch(15.00% 0.00341 247.86)",
+          "oklch(26.43% 0.00341 247.86)",
+          "oklch(37.86% 0.00341 247.86)",
+          "oklch(49.29% 0.00341 247.86)",
+          "oklch(60.71% 0.00341 247.86)",
+          "oklch(72.14% 0.00341 247.86)",
+          "oklch(83.57% 0.00341 247.86)",
+          "oklch(95.00% 0.00341 247.86)"
+        ]
+      },
+      "media-hover": {
+        "role": "neutral",
+        "displayName": "Media Hover",
+        "tonalRamp": [
+          "oklch(15.00% 0.03916 257.29)",
+          "oklch(26.43% 0.03916 257.29)",
+          "oklch(37.86% 0.03916 257.29)",
+          "oklch(49.29% 0.03916 257.29)",
+          "oklch(60.71% 0.03916 257.29)",
+          "oklch(72.14% 0.03916 257.29)",
+          "oklch(83.57% 0.03916 257.29)",
+          "oklch(95.00% 0.03916 257.29)"
+        ]
+      },
+      "media-focus": {
+        "role": "neutral",
+        "displayName": "Media Focus",
+        "tonalRamp": [
+          "oklch(15.00% 0.09560 251.81)",
+          "oklch(26.43% 0.09560 251.81)",
+          "oklch(37.86% 0.09560 251.81)",
+          "oklch(49.29% 0.09560 251.81)",
+          "oklch(60.71% 0.09560 251.81)",
+          "oklch(72.14% 0.09560 251.81)",
+          "oklch(83.57% 0.09560 251.81)",
+          "oklch(95.00% 0.09560 251.81)"
+        ]
+      },
+      "media-disabled": {
+        "role": "neutral",
+        "displayName": "Media Disabled",
+        "tonalRamp": [
+          "oklch(15.00% 0.03511 256.79)",
+          "oklch(26.43% 0.03511 256.79)",
+          "oklch(37.86% 0.03511 256.79)",
+          "oklch(49.29% 0.03511 256.79)",
+          "oklch(60.71% 0.03511 256.79)",
+          "oklch(72.14% 0.03511 256.79)",
+          "oklch(83.57% 0.03511 256.79)",
+          "oklch(95.00% 0.03511 256.79)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Current page heading."
+      },
+      "headline-small": {
+        "displayName": "Headline Small",
+        "purpose": "Page heading at 540px and below."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Event section heading."
+      },
+      "camera-title": {
+        "displayName": "Camera Title",
+        "purpose": "Camera card name."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Base and explanatory copy."
+      },
+      "navigation": {
+        "displayName": "Navigation",
+        "purpose": "Desktop navigation."
+      },
+      "field": {
+        "displayName": "Field",
+        "purpose": "Native selects and support copy."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Metadata and normal table text."
+      },
+      "caption": {
+        "displayName": "Caption",
+        "purpose": "Secondary dates and counts."
+      },
+      "button": {
+        "displayName": "Button",
+        "purpose": "Recovery actions."
+      }
+    },
+    "shadows": [
+      {
+        "name": "account-popover",
+        "value": "0 8px 28px #11243c26",
+        "purpose": "Anchored account overlay."
+      },
+      {
+        "name": "demo-dialog",
+        "value": "0 20px 70px #101f3b36",
+        "purpose": "Demo information modal."
+      },
+      {
+        "name": "camera-dialog",
+        "value": "0 24px 72px #0d19284d",
+        "purpose": "Expanded camera modal."
+      }
+    ],
+    "motion": [
+      {
+        "name": "navigation-background",
+        "value": "background-color 160ms ease-out",
+        "purpose": "Navigation hover."
+      },
+      {
+        "name": "event-row-background",
+        "value": "background-color 150ms ease-out",
+        "purpose": "Event hover and selection."
+      },
+      {
+        "name": "reduced-motion-duration",
+        "value": ".01ms",
+        "purpose": "Preference override for transition and animation duration; one iteration and auto scrolling."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "wide-table-min",
+        "value": "1550px"
+      },
+      {
+        "name": "stacked-filter-labels-max",
+        "value": "1450px"
+      },
+      {
+        "name": "compact-table-columns-max",
+        "value": "1350px"
+      },
+      {
+        "name": "compact-review-max",
+        "value": "1080px"
+      },
+      {
+        "name": "horizontal-navigation-max",
+        "value": "900px"
+      },
+      {
+        "name": "stacked-review-max",
+        "value": "700px"
+      },
+      {
+        "name": "camera-touch-controls-max",
+        "value": "640px"
+      },
+      {
+        "name": "stacked-cameras-max",
+        "value": "540px"
+      },
+      {
+        "name": "compact-media-controls-max",
+        "value": "420px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Workspace recovery action.",
+      "html": "<div class=\"ds-specimen\"><button class=\"ds-primary-button\" type=\"button\">Try again</button></div>",
+      "css": ".ds-specimen{font-family:Arial,'Helvetica Neue',sans-serif;font-size:14px;line-height:1.5;color:var(--text, #1e2c41);}\nbutton{font: inherit;}\nbutton{-webkit-tap-highlight-color: transparent;}\nbutton{cursor: pointer;}\nbutton:disabled{cursor: default;}\nbutton{accent-color: var(--primary, #2563eb); caret-color: var(--primary, #2563eb);}\nbutton:focus-visible{outline: 3px solid #2563eb; outline-offset: 3px;}\nbutton{touch-action: manipulation;}\n.ds-primary-button{border: 0; border-radius: 5px; background: var(--primary, #2563eb); color: white; padding: 10px 17px; font-weight: 500; min-height: 40px;}\n.ds-primary-button:hover{background: var(--primary-hover, #1d4ed8);}"
+    },
+    {
+      "name": "Secondary button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Check assignment access again.",
+      "html": "<div class=\"ds-specimen\"><button class=\"ds-secondary-button\" type=\"button\">Check access again</button></div>",
+      "css": ".ds-specimen{font-family:Arial,'Helvetica Neue',sans-serif;font-size:14px;line-height:1.5;color:var(--text, #1e2c41);}\nbutton{font: inherit;}\nbutton{-webkit-tap-highlight-color: transparent;}\nbutton{cursor: pointer;}\nbutton:disabled{cursor: default;}\nbutton{accent-color: var(--primary, #2563eb); caret-color: var(--primary, #2563eb);}\nbutton:focus-visible{outline: 3px solid #2563eb; outline-offset: 3px;}\nbutton{touch-action: manipulation;}\n.ds-secondary-button{border: 0; border-radius: 5px; background: var(--primary, #2563eb); color: white; padding: 10px 17px; font-weight: 500; min-height: 40px;}\n.ds-secondary-button{color: #2857a7; background: #edf3fd;}\n.ds-secondary-button:hover{background: #dfebff;}"
+    },
+    {
+      "name": "Text button",
+      "kind": "button",
+      "refersTo": "button-text",
+      "description": "Clear filters in the no-matches state.",
+      "html": "<div class=\"ds-specimen\"><button class=\"ds-text-button\" type=\"button\">Clear filters</button></div>",
+      "css": ".ds-specimen{font-family:Arial,'Helvetica Neue',sans-serif;font-size:14px;line-height:1.5;color:var(--text, #1e2c41);}\nbutton{font: inherit;}\nbutton{-webkit-tap-highlight-color: transparent;}\nbutton{cursor: pointer;}\nbutton:disabled{cursor: default;}\nbutton{accent-color: var(--primary, #2563eb); caret-color: var(--primary, #2563eb);}\nbutton:focus-visible{outline: 3px solid #2563eb; outline-offset: 3px;}\nbutton{touch-action: manipulation;}\n.ds-text-button{background: none; border: 0; color: #215bbd; padding: 9px; margin-top: 10px; border-radius: 4px;}\n.ds-text-button:hover{background: #edf3fc;}"
+    },
+    {
+      "name": "Icon button",
+      "kind": "button",
+      "refersTo": "button-icon",
+      "description": "Reload workspace.",
+      "html": "<div class=\"ds-specimen\"><button class=\"ds-icon-button\" type=\"button\" aria-label=\"Reload workspace\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M20 7v5h-5M4 17v-5h5\"/><path d=\"M6.1 6a8 8 0 0 1 12.8 1.5L20 12M4 12l1.1 4.5A8 8 0 0 0 17.9 18\"/></svg></button></div>",
+      "css": ".ds-specimen{font-family:Arial,'Helvetica Neue',sans-serif;font-size:14px;line-height:1.5;color:var(--text, #1e2c41);}\nbutton{font: inherit;}\nbutton{-webkit-tap-highlight-color: transparent;}\nbutton{cursor: pointer;}\nbutton:disabled{cursor: default;}\nbutton{accent-color: var(--primary, #2563eb); caret-color: var(--primary, #2563eb);}\nbutton:focus-visible{outline: 3px solid #2563eb; outline-offset: 3px;}\nsvg{flex-shrink: 0;}\nbutton{touch-action: manipulation;}\n.ds-icon-button{width: 34px; height: 34px; border: 0; background: transparent; color: var(--text-muted, #536277); display: inline-grid; place-items: center; border-radius: 5px; padding: 0;}\n.ds-icon-button:hover{background: #e6ecf4; color: var(--text, #1e2c41);}\n.ds-icon-button:disabled{opacity: .45;}"
+    },
+    {
+      "name": "Demo disclosure",
+      "kind": "chip",
+      "refersTo": "demo-label",
+      "description": "Compact button opening the demo disclosure.",
+      "html": "<div class=\"ds-specimen\"><button class=\"ds-demo-label\" type=\"button\">Demo data</button></div>",
+      "css": ".ds-specimen{font-family:Arial,'Helvetica Neue',sans-serif;font-size:14px;line-height:1.5;color:var(--text, #1e2c41);}.ds-demo-label{font-size:12px;}\nbutton{font: inherit;}\nbutton{-webkit-tap-highlight-color: transparent;}\nbutton{cursor: pointer;}\nbutton:disabled{cursor: default;}\nbutton{accent-color: var(--primary, #2563eb); caret-color: var(--primary, #2563eb);}\nbutton:focus-visible{outline: 3px solid #2563eb; outline-offset: 3px;}\nbutton{touch-action: manipulation;}\n.ds-demo-label{background: #e9eef5; border: 0; color: #354964; border-radius: 4px; padding: 5px 9px; min-height: 30px;}\n.ds-demo-label:hover{background: #dce6f5;}"
+    },
+    {
+      "name": "Filter select",
+      "kind": "input",
+      "refersTo": "filter-select",
+      "description": "Native select with visible camera label.",
+      "html": "<div class=\"ds-specimen\"><div class=\"ds-event-filters\"><label><span>Camera</span><select aria-label=\"Filter events by camera\"><option>All cameras</option><option>Storage room 01</option></select></label></div></div>",
+      "css": ".ds-specimen{font-family:Arial,'Helvetica Neue',sans-serif;font-size:14px;line-height:1.5;color:var(--text, #1e2c41);}\nselect{font: inherit;}\nselect{-webkit-tap-highlight-color: transparent;}\nselect{accent-color: var(--primary, #2563eb); caret-color: var(--primary, #2563eb);}\nselect:focus-visible{outline: 3px solid #2563eb; outline-offset: 3px;}\nselect{touch-action: manipulation;}\n.ds-event-filters{display: flex; gap: 16px; align-items: center;}\n.ds-event-filters label{display: flex; align-items: center; gap: 9px; font-size: 12px; color: #46556c;}\n.ds-event-filters select{min-height: 36px; max-width: 156px; border: 1px solid #cdd6e4; border-radius: 5px; background: white; color: #263751; padding: 7px 24px 7px 10px; font-size: 13px;}\n.ds-event-filters select:hover{border-color: #9daec4;}\n@media (min-width: 1550px){.ds-event-filters select{min-width: 132px;}}\n@media (max-width: 1450px){.ds-event-filters{gap: 10px;}\n.ds-event-filters label{align-items: flex-start; flex-direction: column; gap: 3px;}\n.ds-event-filters select{min-width: 105px; max-width: 145px;}}\n@media (max-width: 1080px){.ds-event-filters{width: 100%;}\n.ds-event-filters label{flex: 1;}\n.ds-event-filters select{width: 100%; max-width: none;}}\n@media (max-width: 700px){.ds-event-filters{width: auto;}}\n@media (max-width: 540px){.ds-event-filters{width: 100%; gap: 12px;}\n.ds-event-filters label{width: 50%;}\n.ds-event-filters select{max-width: none; min-height: 40px;}}"
+    },
+    {
+      "name": "Navigation",
+      "kind": "nav",
+      "refersTo": "navigation-link",
+      "description": "Current and default hash links on the navy surface.",
+      "html": "<div class=\"ds-specimen\"><nav class=\"ds-primary-navigation\"><a class=\"ds-nav-link ds-is-current\" href=\"#overview\" aria-current=\"page\">Overview</a><a class=\"ds-nav-link\" href=\"#events\">Events</a></nav></div>",
+      "css": ".ds-specimen{font-family:Arial,'Helvetica Neue',sans-serif;font-size:14px;line-height:1.5;color:var(--text, #1e2c41);}.ds-primary-navigation{background:var(--nav, #1d2c3f);}\na{-webkit-tap-highlight-color: transparent;}\na{color: inherit; text-underline-offset: 3px;}\na:focus-visible{outline: 3px solid #2563eb; outline-offset: 3px;}\na{touch-action: manipulation;}\n.ds-primary-navigation{display: grid; gap: 8px; padding: 8px;}\n.ds-nav-link{display: flex; align-items: center; gap: 15px; padding: 13px 16px; border-radius: 5px; text-decoration: none; min-height: 47px; font-size: 15px; color: #e4eaf2; transition: background-color 160ms ease-out;}\n.ds-nav-link:hover{background: #2a3b51;}\n.ds-nav-link.ds-is-current{background: var(--primary, #2563eb); color: white;}\n@media (max-width: 900px){.ds-primary-navigation{display: flex; margin-left: auto; padding: 6px; gap: 5px;}\n.ds-nav-link{padding: 10px 13px; min-height: 40px; gap: 8px; font-size: 14px;}}\n@media (max-width: 540px){.ds-nav-link{gap: 6px; padding: 9px; font-size: 12px;}\n.ds-nav-link svg{width: 17px;}\n.ds-primary-navigation{padding: 3px; gap: 0;}}\n@media(prefers-reduced-motion:reduce){.ds-specimen *{transition-duration:.01ms!important;}}"
+    },
+    {
+      "name": "Camera card",
+      "kind": "card",
+      "refersTo": "camera-card",
+      "description": "Loading state preserves camera identity and metadata.",
+      "html": "<div class=\"ds-specimen\"><article class=\"ds-camera-card\"><header class=\"ds-camera-header\"><h2 class=\"ds-camera-name\">Storage room 01</h2><div class=\"ds-camera-metadata\"><span class=\"ds-camera-state ds-camera-state--unavailable\"><span class=\"ds-camera-state-dot\" aria-hidden=\"true\"></span>Loading preview</span><span class=\"ds-camera-frame-time\">Last frame: 14:36:00</span></div></header><div class=\"ds-camera-preview\"><div class=\"ds-camera-loading\" role=\"status\">Loading preview\u2026</div></div></article></div>",
+      "css": ".ds-specimen{font-family:Arial,'Helvetica Neue',sans-serif;font-size:14px;line-height:1.5;color:var(--text, #1e2c41);}\nh2{margin: 0;}\n.ds-camera-card{min-width: 0;\n  padding: 16px;\n  border: 1px solid var(--border, #e0e6ee);\n  border-radius: 8px;\n  background: var(--surface, #fff);\n  color: var(--text, #1e2c41);\n  text-align: left;}\n.ds-camera-header{display: flex;\n  align-items: center;\n  justify-content: space-between;\n  flex-wrap: wrap;\n  gap: 10px 20px;\n  margin-bottom: 16px;}\n.ds-camera-name{min-width: 0;\n  margin: 0;\n  font-family: inherit;\n  font-size: 17px;\n  line-height: 1.4;\n  font-weight: 650;\n  letter-spacing: -0.015em;\n  overflow-wrap: anywhere;}\n.ds-camera-metadata{display: flex;\n  align-items: center;\n  flex-wrap: wrap;\n  gap: 6px 20px;\n  color: var(--text-muted, #536277);\n  font-size: 12px;\n  line-height: 1.5;}\n.ds-camera-state{display: inline-flex;\n  align-items: center;\n  gap: 7px;\n  font-weight: 600;}\n.ds-camera-state-dot{width: 8px;\n  height: 8px;\n  flex: none;\n  border-radius: 50%;\n  background: currentColor;}\n.ds-camera-state--unavailable{color: var(--text-muted, #536277);}\n.ds-camera-frame-time{white-space: nowrap;}\n.ds-camera-frame-time{font-variant-numeric: tabular-nums;}\n.ds-camera-preview{position: relative;\n  isolation: isolate;\n  display: grid;\n  overflow: hidden;\n  width: 100%;\n  aspect-ratio: 1.83;\n  border-radius: 3px;\n  background: #1d2c3f;}\n.ds-camera-loading{grid-area: 1 / 1;\n  z-index: 1;\n  align-self: center;\n  justify-self: center;\n  display: flex;\n  flex-direction: column;\n  gap: 5px;\n  padding: 18px 48px 18px 18px;\n  color: #fff;\n  text-align: center;\n  font-size: 14px;\n  line-height: 1.5;\n  overflow-wrap: anywhere;}\n.ds-camera-loading{color: #e0e7ee;}\n@media (max-width: 640px){.ds-camera-card{padding: 12px;}\n.ds-camera-header{gap: 6px;\n    margin-bottom: 12px;}\n.ds-camera-metadata{width: 100%;\n    gap: 5px 14px;}}"
+    },
+    {
+      "name": "Selected event",
+      "kind": "custom",
+      "refersTo": "event-row-selected",
+      "description": "Selected time button with independent capture and recording labels.",
+      "html": "<div class=\"ds-specimen\"><div class=\"ds-event-table-scroll\" tabindex=\"0\" role=\"region\" aria-label=\"Presence events table\"><table class=\"ds-event-table\"><thead><tr><th scope=\"col\">Time</th><th scope=\"col\">Capture</th><th scope=\"col\">Recording</th></tr></thead><tbody><tr class=\"ds-is-selected\"><td><button class=\"ds-event-time-button\" type=\"button\" aria-pressed=\"true\">14:32:00</button></td><td>Completed</td><td>Ready</td></tr></tbody></table></div></div>",
+      "css": ".ds-specimen{font-family:Arial,'Helvetica Neue',sans-serif;font-size:14px;line-height:1.5;color:var(--text, #1e2c41);}.ds-event-table-scroll:focus-visible{outline:3px solid #2563eb;outline-offset:3px;}\nbutton{font: inherit;}\nbutton{-webkit-tap-highlight-color: transparent;}\nbutton{cursor: pointer;}\nbutton:disabled{cursor: default;}\nbutton{accent-color: var(--primary, #2563eb); caret-color: var(--primary, #2563eb);}\nbutton:focus-visible{outline: 3px solid #2563eb; outline-offset: 3px;}\nbutton{touch-action: manipulation;}\n.ds-event-table-scroll{overflow: auto; border: 1px solid var(--border, #e0e6ee); border-radius: 5px; min-height: 246px;}\n.ds-event-table{width: 100%; border-collapse: collapse; text-align: left; font-size: 12px;}\n.ds-event-table th{font-weight: 400; color: #415571; padding: 14px 12px; height: 46px; background: #fcfdff; white-space: nowrap;}\n.ds-event-table td{height: 57px; padding: 12px; border-top: 1px solid #e5eaf2; white-space: nowrap;}\n.ds-event-table tbody tr{cursor: pointer; transition: background-color 150ms ease-out;}\n.ds-event-table tbody tr:hover{background: #f2f6fd;}\n.ds-event-table tbody tr.ds-is-selected{background: var(--selection, #e2ebff);}\n.ds-event-table tbody tr.ds-is-selected td,.ds-event-table tbody tr.ds-is-selected + tr td{border-top-color: #bfd1f8;}\n.ds-event-time-button{padding: 6px 2px; margin: -6px -2px; background: none; border: 0; color: #243c63; font: inherit; text-align: left; border-radius: 3px; font-variant-numeric: tabular-nums; min-height: 32px;}\n.ds-event-time-button:hover{color: #174fb2; text-decoration: underline; text-underline-offset: 3px;}\n@media (min-width: 1550px){.ds-event-table{font-size: 13px;}\n.ds-event-table td{height: 59px;}}\n@media (max-width: 1350px){.ds-event-table td,.ds-event-table th{padding-inline: 10px;}}\n@media (max-width: 1080px){.ds-event-table{font-size: 11px;}}\n@media (max-width: 900px){.ds-event-table{font-size: 12px;}}\n@media (max-width: 700px){.ds-event-table{min-width: 530px;}}\n@media (max-width: 540px){.ds-event-table-scroll{min-height: 236px;}}\n@media(prefers-reduced-motion:reduce){.ds-specimen *{transition-duration:.01ms!important;}}"
+    },
+    {
+      "name": "Media button",
+      "kind": "button",
+      "refersTo": "media-button",
+      "description": "Playback appearance; application behavior belongs to MediaPlayer.",
+      "html": "<div class=\"ds-specimen\"><div class=\"ds-sentinel-media-surface\"><button class=\"ds-sentinel-media-button\" type=\"button\" aria-label=\"Play recording\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m8 5 11 7-11 7Z\" fill=\"currentColor\" stroke-width=\"1.5\"/></svg></button></div></div>",
+      "css": ".ds-specimen{font-family:Arial,'Helvetica Neue',sans-serif;font-size:14px;line-height:1.5;color:var(--text, #1e2c41);}\nbutton{font: inherit;}\nbutton{-webkit-tap-highlight-color: transparent;}\nbutton{cursor: pointer;}\nbutton:disabled{cursor: default;}\nbutton{accent-color: var(--primary, #2563eb); caret-color: var(--primary, #2563eb);}\nbutton:focus-visible{outline: 3px solid #2563eb; outline-offset: 3px;}\nsvg{flex-shrink: 0;}\nbutton{touch-action: manipulation;}\n.ds-sentinel-media-surface{background: #1e293b;\n  color: #f8fafc;\n  overflow: hidden;\n  border-radius: 4px;}\n.ds-sentinel-media-button{display: inline-grid;\n  place-items: center;\n  width: 40px;\n  height: 44px;\n  padding: 0;\n  border: 0;\n  border-radius: 4px;\n  color: inherit;\n  background: transparent;\n  cursor: pointer;}\n.ds-sentinel-media-button:hover:not(:disabled){background: #334155;}\n.ds-sentinel-media-button:disabled{color: #94a3b8;\n  cursor: not-allowed;}\n.ds-sentinel-media-button:focus-visible{outline: 2px solid #93c5fd;\n  outline-offset: 2px;}\n.ds-sentinel-media-surface:fullscreen{display: flex;\n  flex-direction: column;\n  justify-content: center;\n  width: 100%;\n  height: 100%;\n  border-radius: 0;}\n@media (max-width: 420px){.ds-sentinel-media-button{width: 36px;}}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Conventional Security Workspace",
+    "overview": "Sentinel uses a familiar, restrained operator interface: a navy navigation rail,\npale application ground, white bordered panels, and clear blue selection. The\nworkhorse sans, compact metadata, and aligned controls give footage and event\nrecords room to be read. This records the user's approved conventional dashboard\ndirection as implemented, rather than introducing a new identity.\n\nThe current implementation is a labeled demonstration workspace. Its camera\nimagery is synthetic and its recordings are illustrative still-frame previews.\nKeep those disclosures visible; production authentication, camera transport, and\nbackend authorization are still required. Detailed access requirements remain in\n[PRODUCT.md](PRODUCT.md), and page composition remains in the\n[operator surface brief](.impeccable/surfaces/frontend-src-app-tsx.md).",
+    "keyCharacteristics": [
+      "Navy navigation, pale ground, and quiet white panels.",
+      "Blue navigation and event selection, with written status labels.",
+      "Compact sans typography, tabular timestamps, and conventional media controls.",
+      "Contained imagery, modest corners, and shadows reserved for overlays."
+    ],
+    "rules": [
+      {
+        "name": "The Written State Rule",
+        "body": "Every operational color accompanies a written state; color alone never communicates stream health, capture state, or recording readiness.",
+        "section": "colors"
+      },
+      {
+        "name": "The Stable Time Rule",
+        "body": "Use tabular numerals for frame times, event time buttons, the workspace clock, and playback time so changing digits retain alignment.",
+        "section": "typography"
+      },
+      {
+        "name": "The Overlay Depth Rule",
+        "body": "Keep camera and review panels flat; reserve the observed shadow treatments for content that overlays the workspace.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Whole Frame Rule",
+        "body": "Contain camera and recording imagery within its viewport; do not crop away the scene to fill a decorative card shape.",
+        "section": "shapes"
+      },
+      {
+        "name": "The Separate States Rule",
+        "body": "Capture (capturing, completed, interrupted) and recording availability (ready, preparing, failed, unavailable) remain separate labels; completed capture does not promise a playable clip.",
+        "section": "components"
+      }
+    ],
+    "dos": [
+      "**Do** preserve the approved conventional navigation, restrained panels, and readable workhorse typography.",
+      "**Do** pair operational colors with written labels and keep capture separate from recording availability.",
+      "**Do** retain whole-frame imagery, tabular timestamps, native select labels, and visible keyboard focus.",
+      "**Do** keep demo disclosures and illustrative-media captions visible until real integrations replace the fixtures.",
+      "**Do** preserve event metadata when media is unavailable and explain the available recovery action."
+    ],
+    "donts": [
+      "**Don't** portray stale, offline, paused, or failed monitoring as proof of no presence.",
+      "**Don't** imply threat severity, identity, or intent from the modeled person-presence event.",
+      "**Don't** describe frontend visibility or demo session filtering as backend authorization.",
+      "**Don't** add permanent panel shadows or entrance choreography to the implemented operator workspace."
+    ]
+  }
+}
