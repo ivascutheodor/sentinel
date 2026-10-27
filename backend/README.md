@@ -40,9 +40,11 @@ APP_NAME=Sentinel
 DEBUG=True
 ENVIRONMENT=development
 API_PREFIX=/api/v1
+WORKER_API_KEY=<long random string, same as the worker's SENTINEL_API_KEY>
 ```
 
-The `.env` file must not be committed.
+The `.env` file must not be committed. Every variable without a default must be set,
+or the app (and the tests) cannot start.
 
 Whenever a new environment variable is introduced, update `.env.example` as well.
 
@@ -84,117 +86,89 @@ Comments in the schema and models that describe these protections express intend
 behavior. The current migration does not implement those protections, and
 `alembic check` does not verify them.
 
+## Accounts and Login
+
+Users log in with a username and password; the API answers with an `HttpOnly`
+session cookie (`sentinel_session`). Only a SHA-256 hash of the session token is
+stored. Passwords are hashed with Argon2.
+
+Create an account (the password is prompted twice, at least 12 characters):
+
+```bash
+uv run python -m app.cli.create_user admin "Admin Name" --admin
+```
+
+The worker does not log in. It sends the shared secret from `WORKER_API_KEY` in an
+`X-API-Key` header; its `SENTINEL_API_KEY` must have the same value.
+
 ## Run the API
 
 ```bash
-uv run fastapi dev server/server.py --host 0.0.0.0
+uv run fastapi dev app/main.py --host 0.0.0.0
 ```
 
-The original entry point also serves the same application:
+The API runs on port `8000` by default. Swagger documentation is at `/docs`, and the
+health check at `/health`.
 
-```bash
-uv run fastapi dev server/server.py --host 0.0.0.0
-```
+With `ENVIRONMENT=development`, startup creates the camera `test_camera_01` if it
+does not exist, so the worker's default camera name works out of the box.
 
-The API runs on port `8000` by default.
+## Routes
 
-Swagger documentation is available at:
+All routes are under `API_PREFIX` (default `/api/v1`):
 
-```text
-/docs
-```
+| Route | Who | Purpose |
+|---|---|---|
+| `POST /auth/login` | anyone | `{username, password}`; sets the session cookie |
+| `POST /auth/logout` | logged in | revokes the session |
+| `GET /auth/me` | logged in | the current user |
+| `POST /events` | worker (`X-API-Key`) | save a finished incident clip |
+| `GET /events` | logged in | all events with their clips, newest first |
+| `GET /events/{event_id}` | logged in | one event |
+| `DELETE /events/{event_id}` | logged in | delete an event and its clip rows (not the file) |
+| `GET /videos/{filename}` | logged in | stream a file from `recordings/` |
 
-The current health endpoint is:
-
-```text
-/health
-```
+Login attempts and logouts are written to `audit_logs`.
 
 ## Events and Video Clips
 
-The event routes use the existing PostgreSQL connection in `app/db/session.py`
-and the `POSTGRES_*` settings in `.env`. Event data persists across API restarts.
-Both entry points expose the same routes under `API_PREFIX` (default `/api/v1`):
-
-- `POST /api/v1/events`: create an event and optional video clips atomically.
-- `GET /api/v1/events`: list events, including their clips, newest first.
-- `GET /api/v1/events/{event_id}`: retrieve an event by UUID.
-- `DELETE /api/v1/events/{event_id}`: delete an event without related clips.
-- `GET /api/v1/videos/{filename}`: serve a file from `sentinel/recordings/`.
-
-`camera_id` must be the UUID of an existing row in `cameras`. Register the camera
-in PostgreSQL before sending events; there is not yet a camera management API.
-Unknown cameras or events return `404`, invalid requests return `422`, and
-database constraint conflicts return `409`. Deleting an event with related clips
-returns `409`; this endpoint does not delete video files or cascade into clips.
-
-For local development, register a camera using your actual name and RTSP address
-(without embedded credentials), then use the returned UUID in event requests:
-
-```sql
-INSERT INTO cameras (name, stream_url)
-VALUES ('Entrance', 'rtsp://camera-host/stream')
-RETURNING id;
-```
-
-The old `{ "camera_id": "test_camera_01", "video_path": "..." }` request is replaced
-by the database contract. Send actual timezone-aware recording timestamps and the
-configuration used when the event started. For example, a completed recording:
+The worker posts one event when a clip is finished. Only `camera_id` (the camera's
+**name**) and `video_path` (the file name inside `recordings/`) are required:
 
 ```json
 {
-  "camera_id": "00000000-0000-0000-0000-000000000001",
-  "status": "completed",
+  "camera_id": "test_camera_01",
+  "video_path": "incident_2026-10-08_10-00-00.mp4",
   "started_at": "2026-10-08T10:00:00Z",
   "last_person_seen_at": "2026-10-08T10:00:20Z",
-  "closed_at": "2026-10-08T10:00:30Z",
+  "closed_at": "2026-10-08T10:00:25Z",
   "end_reason": "person_absent",
+  "recorded_start_at": "2026-10-08T09:59:55Z",
+  "recorded_end_at": "2026-10-08T10:00:25Z",
+  "size_bytes": 1048576,
   "config_snapshot": {
     "schema_version": 1,
     "model_ref": "yolo11n.pt",
     "detection_config": { "schema_version": 1, "region": null },
-    "settings": {
-      "retention_days": 7,
-      "pre_roll_seconds": 10,
-      "post_roll_seconds": 10,
-      "clip_part_seconds": 60,
-      "confidence_threshold": 0.6
-    }
-  },
-  "clips": [
-    {
-      "part_number": 1,
-      "source_manifest_ref": "manifests/incident-2026-10-08-100000.json",
-      "status": "ready",
-      "filepath": "recordings/incident-2026-10-08-100000.mp4",
-      "size_bytes": 1048576,
-      "recorded_start_at": "2026-10-08T09:59:50Z",
-      "recorded_end_at": "2026-10-08T10:00:30Z",
-      "source_ready_at": "2026-10-08T10:00:31Z",
-      "expires_at": "2026-10-15T10:00:30Z"
-    }
-  ]
+    "settings": { "pre_roll_seconds": 5, "post_roll_seconds": 5 }
+  }
 }
 ```
 
-Replace the example camera UUID, paths, timestamps, size, and configuration with
-real values. `source_manifest_ref` identifies the recorder's recoverable source
-manifest; it is required by the existing schema. Clips default to `pending` and
-require `part_number`, `source_manifest_ref`, and `expires_at`. A `ready` clip also
-requires its path, positive file size, recording start/end, and source-ready time.
-The API stores metadata; it does not upload or finalize video files.
+The backend decides the rest:
 
-Events default to `capturing`, with no `closed_at` or `end_reason`. Completed
-events require both fields and `end_reason="person_absent"`; interrupted events
-require an interruption reason listed in `/docs`. `clips` may be omitted for
-metadata-only events. Event/clip updates and media jobs are not implemented by
-these routes. Until an update route exists, the recorder should submit one
-completed or interrupted event when recording finishes, including its clips,
-instead of posting a separate capturing event at the start.
+- `end_reason` `person_absent` (the default) gives a `completed` event; any other
+  reason listed in `/docs` gives an `interrupted` one.
+- The clip is `ready` when `size_bytes` and the recorded start/end are sent,
+  otherwise `pending`.
+- `expires_at` is 7 days after saving; `source_manifest_ref` is a placeholder.
+- Missing times fall back to "now"; a missing snapshot falls back to a default one.
 
-The worker's current two-field POST must be updated to this contract before it
-can submit recordings successfully. Its recording directory must also match
-`sentinel/recordings/` if files are to be downloaded through the video endpoint.
+Times must include a timezone. The three event times are sent together or not at
+all, and must be in order; the two recorded times likewise, with end after start.
+Unknown fields, unknown cameras and events, and bad input are rejected with `422`
+or `404`; database conflicts (for example the same clip file posted twice) return
+`409`.
 
 ## Tests
 
@@ -221,6 +195,13 @@ with the existing migrations applied:
 
 ```bash
 TEST_DATABASE_URL='postgresql+psycopg://USER:PASSWORD@HOST:5432/TEST_DB' uv run pytest
+```
+
+In PowerShell:
+
+```powershell
+$env:TEST_DATABASE_URL = "postgresql+psycopg://USER:PASSWORD@HOST:5432/TEST_DB"
+uv run pytest
 ```
 
 Use a test database. Each integration test rolls back its outer transaction;

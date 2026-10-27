@@ -25,6 +25,9 @@ class Settings(BaseSettings):
     # Shared secret the worker sends in the X-API-Key header to create events.
     worker_api_key: SecretStr
 
+    # Browser origins allowed to call the API with cookies, as a JSON list in .env.
+    cors_origins: list[str] = ["http://localhost:5173"]
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
 
