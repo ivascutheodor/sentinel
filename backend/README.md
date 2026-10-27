@@ -87,7 +87,13 @@ behavior. The current migration does not implement those protections, and
 ## Run the API
 
 ```bash
-uv run fastapi dev app/main.py --host 0.0.0.0
+uv run fastapi dev server/server.py --host 0.0.0.0
+```
+
+The original entry point also serves the same application:
+
+```bash
+uv run fastapi dev server/server.py --host 0.0.0.0
 ```
 
 The API runs on port `8000` by default.
@@ -103,6 +109,92 @@ The current health endpoint is:
 ```text
 /health
 ```
+
+## Events and Video Clips
+
+The event routes use the existing PostgreSQL connection in `app/db/session.py`
+and the `POSTGRES_*` settings in `.env`. Event data persists across API restarts.
+Both entry points expose the same routes under `API_PREFIX` (default `/api/v1`):
+
+- `POST /api/v1/events`: create an event and optional video clips atomically.
+- `GET /api/v1/events`: list events, including their clips, newest first.
+- `GET /api/v1/events/{event_id}`: retrieve an event by UUID.
+- `DELETE /api/v1/events/{event_id}`: delete an event without related clips.
+- `GET /api/v1/videos/{filename}`: serve a file from `sentinel/recordings/`.
+
+`camera_id` must be the UUID of an existing row in `cameras`. Register the camera
+in PostgreSQL before sending events; there is not yet a camera management API.
+Unknown cameras or events return `404`, invalid requests return `422`, and
+database constraint conflicts return `409`. Deleting an event with related clips
+returns `409`; this endpoint does not delete video files or cascade into clips.
+
+For local development, register a camera using your actual name and RTSP address
+(without embedded credentials), then use the returned UUID in event requests:
+
+```sql
+INSERT INTO cameras (name, stream_url)
+VALUES ('Entrance', 'rtsp://camera-host/stream')
+RETURNING id;
+```
+
+The old `{ "camera_id": "test_camera_01", "video_path": "..." }` request is replaced
+by the database contract. Send actual timezone-aware recording timestamps and the
+configuration used when the event started. For example, a completed recording:
+
+```json
+{
+  "camera_id": "00000000-0000-0000-0000-000000000001",
+  "status": "completed",
+  "started_at": "2026-10-08T10:00:00Z",
+  "last_person_seen_at": "2026-10-08T10:00:20Z",
+  "closed_at": "2026-10-08T10:00:30Z",
+  "end_reason": "person_absent",
+  "config_snapshot": {
+    "schema_version": 1,
+    "model_ref": "yolo11n.pt",
+    "detection_config": { "schema_version": 1, "region": null },
+    "settings": {
+      "retention_days": 7,
+      "pre_roll_seconds": 10,
+      "post_roll_seconds": 10,
+      "clip_part_seconds": 60,
+      "confidence_threshold": 0.6
+    }
+  },
+  "clips": [
+    {
+      "part_number": 1,
+      "source_manifest_ref": "manifests/incident-2026-10-08-100000.json",
+      "status": "ready",
+      "filepath": "recordings/incident-2026-10-08-100000.mp4",
+      "size_bytes": 1048576,
+      "recorded_start_at": "2026-10-08T09:59:50Z",
+      "recorded_end_at": "2026-10-08T10:00:30Z",
+      "source_ready_at": "2026-10-08T10:00:31Z",
+      "expires_at": "2026-10-15T10:00:30Z"
+    }
+  ]
+}
+```
+
+Replace the example camera UUID, paths, timestamps, size, and configuration with
+real values. `source_manifest_ref` identifies the recorder's recoverable source
+manifest; it is required by the existing schema. Clips default to `pending` and
+require `part_number`, `source_manifest_ref`, and `expires_at`. A `ready` clip also
+requires its path, positive file size, recording start/end, and source-ready time.
+The API stores metadata; it does not upload or finalize video files.
+
+Events default to `capturing`, with no `closed_at` or `end_reason`. Completed
+events require both fields and `end_reason="person_absent"`; interrupted events
+require an interruption reason listed in `/docs`. `clips` may be omitted for
+metadata-only events. Event/clip updates and media jobs are not implemented by
+these routes. Until an update route exists, the recorder should submit one
+completed or interrupted event when recording finishes, including its clips,
+instead of posting a separate capturing event at the start.
+
+The worker's current two-field POST must be updated to this contract before it
+can submit recordings successfully. Its recording directory must also match
+`sentinel/recordings/` if files are to be downloaded through the video endpoint.
 
 ## Tests
 
@@ -123,6 +215,18 @@ Run tests with verbose output:
 ```bash
 uv run pytest -v
 ```
+
+PostgreSQL integration tests run when `TEST_DATABASE_URL` points to a database
+with the existing migrations applied:
+
+```bash
+TEST_DATABASE_URL='postgresql+psycopg://USER:PASSWORD@HOST:5432/TEST_DB' uv run pytest
+```
+
+Use a test database. Each integration test rolls back its outer transaction;
+request-level commits use savepoints so test cameras, events, and clips are not
+retained. Without this variable, database integration tests are skipped and
+request validation, health, and video-serving tests still run.
 
 ## Linting
 

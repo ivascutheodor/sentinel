@@ -40,8 +40,8 @@ CREATE TYPE "audit_outcomes" AS ENUM (
 CREATE TABLE IF NOT EXISTS "users" (
 	"id" UUID NOT NULL DEFAULT gen_random_uuid(),
 	"display_name" TEXT NOT NULL CHECK(length(btrim(display_name)) BETWEEN 1 AND 200),
-	-- Canonical lowercase, trimmed login email. Backend validates address syntax before insertion; UNIQUE enforces the canonical identity.
-	"email" TEXT NOT NULL UNIQUE CHECK(email = lower(btrim(email)) AND length(email) BETWEEN 3 AND 254),
+	-- Login name: 3-50 lower-case letters, digits, dot, underscore or hyphen. UNIQUE enforces the canonical identity.
+	"username" TEXT NOT NULL UNIQUE CHECK(username ~ '^[a-z0-9._-]{3,50}$'),
 	-- Encoded password hash, including algorithm and parameters. Hash with Argon2id in the authentication service; never store plaintext.
 	"password_hash" TEXT NOT NULL CHECK(length(btrim(password_hash)) > 0),
 	"role" ROLES NOT NULL DEFAULT 'user',
@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS "users" (
 );
 
 COMMENT ON TABLE "users" IS 'Single-clinic accounts. Deactivate rather than hard-delete accounts referenced by historical records. Authentication must check is_active. A role change or deactivation also invalidates affected sessions/live authorizations.';
-COMMENT ON COLUMN "users"."email" IS 'Canonical lowercase, trimmed login email. Backend validates address syntax before insertion; UNIQUE enforces the canonical identity.';
+COMMENT ON COLUMN "users"."username" IS 'Login name: 3-50 lower-case letters, digits, dot, underscore or hyphen. UNIQUE enforces the canonical identity.';
 COMMENT ON COLUMN "users"."password_hash" IS 'Encoded password hash, including algorithm and parameters. Hash with Argon2id in the authentication service; never store plaintext.';
 
 CREATE TABLE IF NOT EXISTS "cameras" (

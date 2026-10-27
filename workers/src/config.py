@@ -22,14 +22,16 @@ def _resolve(value: str) -> Path:
 @dataclass(frozen=True)
 class Settings:
     # Video file path, camera index (e.g. "0") or stream URL (e.g. rtsp://...)
-    video_source: str = os.getenv("SENTINEL_VIDEO_SOURCE", str(WORKERS_DIR / "test.mp4"))
+    video_source: str = os.getenv("SENTINEL_VIDEO_SOURCE", str(WORKERS_DIR.parent / "recordings" / "test1.mp4"))
     zone_config: Path = _resolve(os.getenv("SENTINEL_ZONE_CONFIG", "src/config_zona.json"))
     model_path: str = str(_resolve(os.getenv("SENTINEL_MODEL", "yolo11n.pt")))
-    clips_dir: Path = _resolve(os.getenv("SENTINEL_CLIPS_DIR", "sentinel/recordings"))
+    clips_dir: Path = _resolve(os.getenv("SENTINEL_CLIPS_DIR", "../recordings"))
 
     #example, should be changed 
     api_url: str = os.getenv("SENTINEL_API_URL", "http://127.0.0.1:8000/api/v1")
     camera_id: str = os.getenv("SENTINEL_CAMERA_ID", "test_camera_01")
+    # Must match WORKER_API_KEY in backend/.env
+    api_key: str = os.getenv("SENTINEL_API_KEY", "")
 
 
     pre_roll_seconds: float = float(os.getenv("SENTINEL_PRE_ROLL_SECONDS", "5"))

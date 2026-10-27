@@ -18,6 +18,13 @@ class Settings(BaseSettings):
     postgres_port: int
     postgres_password: SecretStr
 
+    session_cookie_name: str = "sentinel_session"
+    # Must be True once the API is served over HTTPS; browsers drop Secure cookies on plain http.
+    session_cookie_secure: bool = False
+
+    # Shared secret the worker sends in the X-API-Key header to create events.
+    worker_api_key: SecretStr
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
 
