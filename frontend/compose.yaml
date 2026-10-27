@@ -1,0 +1,8 @@
+name: sentinel-frontend
+
+services:
+  frontend:
+    build: .
+    init: true
+    ports:
+      - "0.0.0.0:5173:3000"
