@@ -1,7 +1,7 @@
 """Create a user account from the command line.
 
 Run from backend/:
-    uv run python -m server.create_user admin "Admin Name" --admin
+    uv run python -m app.cli.create_user admin "Admin Name" --admin
 """
 
 import argparse
