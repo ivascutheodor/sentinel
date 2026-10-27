@@ -5,13 +5,13 @@ import secrets
 import sys
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 from uuid import UUID, uuid4
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
-from pydantic import BaseModel
+from pydantic import AwareDatetime, BaseModel, Field, model_validator
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session, selectinload
 
@@ -46,8 +46,13 @@ SessionDep = Annotated[Session, Depends(get_session)]
 
 app = FastAPI(title=settings.app_name, version=get_version(), debug=settings.debug)
 
-app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173"],
-                   allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 PROJECT_ROOT = BACKEND_DIR.parent
 RECORDINGS_DIR = PROJECT_ROOT / "recordings"
@@ -76,9 +81,60 @@ DEFAULT_CONFIG_SNAPSHOT: dict = {
 }
 
 
+# Values allowed by the `events` CHECK; anything but `person_absent` means `interrupted`.
+EndReason = Literal[
+    "person_absent",
+    "stream_lost",
+    "worker_restart",
+    "manual_stop",
+    "camera_disabled",
+    "inference_stalled",
+    "recording_failed",
+]
+
+
+class ConfigSnapshot(BaseModel):
+    """Mirrors the `events.config_snapshot` CHECK, so a bad snapshot is a 422, not a 500."""
+
+    schema_version: Literal[1] = 1
+    model_ref: str = Field(min_length=1)
+    detection_config: dict[str, Any]
+    settings: dict[str, Any]
+
+
 class EventCreate(BaseModel):
     camera_id: str
     video_path: str
+
+    # Optional so a worker that only sends the two fields above still works; the
+    # backend then falls back to "now" and leaves the clip `pending`.
+    started_at: AwareDatetime | None = None
+    last_person_seen_at: AwareDatetime | None = None
+    closed_at: AwareDatetime | None = None
+    end_reason: EndReason = "person_absent"
+    recorded_start_at: AwareDatetime | None = None
+    recorded_end_at: AwareDatetime | None = None
+    size_bytes: int | None = Field(default=None, gt=0)
+    config_snapshot: ConfigSnapshot | None = None
+
+    @model_validator(mode="after")
+    def check_times(self) -> EventCreate:
+        # Each group is all-or-nothing: mixing sent values with a "now" fallback could
+        # break the ordering the `events` and `video_clips` CHECKs enforce.
+        event_times = [self.started_at, self.last_person_seen_at, self.closed_at]
+        if any(t is not None for t in event_times):
+            if any(t is None for t in event_times):
+                raise ValueError(
+                    "Send started_at, last_person_seen_at and closed_at together, or none."
+                )
+            if not self.started_at <= self.last_person_seen_at <= self.closed_at:
+                raise ValueError("Expected started_at <= last_person_seen_at <= closed_at.")
+
+        if (self.recorded_start_at is None) != (self.recorded_end_at is None):
+            raise ValueError("Send recorded_start_at and recorded_end_at together, or neither.")
+        if self.recorded_start_at is not None and self.recorded_end_at <= self.recorded_start_at:
+            raise ValueError("recorded_end_at must be after recorded_start_at.")
+        return self
 
 
 class EventResponse(BaseModel):
@@ -86,6 +142,12 @@ class EventResponse(BaseModel):
     camera_id: UUID
     video_path: str | None
     created_at: datetime
+    status: CaptureState
+    started_at: datetime
+    last_person_seen_at: datetime
+    closed_at: datetime | None
+    duration_seconds: float | None
+    clip_status: VideoStatus | None
 
 
 class LoginRequest(BaseModel):
@@ -101,12 +163,19 @@ class UserResponse(BaseModel):
 
 
 def _to_response(event: Event) -> EventResponse:
-    video_path = event.clips[0].filepath if event.clips else None
+    clip = event.clips[0] if event.clips else None
+    duration = (event.closed_at - event.started_at).total_seconds() if event.closed_at else None
     return EventResponse(
         id=event.id,
         camera_id=event.camera_id,
-        video_path=video_path,
+        video_path=clip.filepath if clip else None,
         created_at=event.created_at,
+        status=event.status,
+        started_at=event.started_at,
+        last_person_seen_at=event.last_person_seen_at,
+        closed_at=event.closed_at,
+        duration_seconds=duration,
+        clip_status=clip.status if clip else None,
     )
 
 
@@ -312,22 +381,34 @@ def create_event_db(event: EventCreate, session: SessionDep):
     new_event = Event(
         camera_id=camera.id,
         event_type=EventType.PERSON_PRESENCE,
-        status=CaptureState.COMPLETED,
-        started_at=now,
-        last_person_seen_at=now,
-        closed_at=now,
-        end_reason="person_absent",
-        config_snapshot=DEFAULT_CONFIG_SNAPSHOT,
+        status=(
+            CaptureState.COMPLETED
+            if event.end_reason == "person_absent"
+            else CaptureState.INTERRUPTED
+        ),
+        started_at=event.started_at or now,
+        last_person_seen_at=event.last_person_seen_at or now,
+        closed_at=event.closed_at or now,
+        end_reason=event.end_reason,
+        config_snapshot=(
+            event.config_snapshot.model_dump() if event.config_snapshot else DEFAULT_CONFIG_SNAPSHOT
+        ),
     )
     session.add(new_event)
     session.flush()  # populate new_event.id before linking the clip
 
+    # The `video_clips` CHECK only allows `ready` once the file's size and time span are known.
+    is_ready = event.size_bytes is not None and event.recorded_start_at is not None
     clip = VideoClip(
         event_id=new_event.id,
         part_number=1,
         source_manifest_ref=f"manifests/{uuid4()}.json",
         filepath=event.video_path,
-        status=VideoStatus.PENDING,
+        status=VideoStatus.READY if is_ready else VideoStatus.PENDING,
+        size_bytes=event.size_bytes,
+        recorded_start_at=event.recorded_start_at,
+        recorded_end_at=event.recorded_end_at,
+        source_ready_at=now if is_ready else None,
         expires_at=now + timedelta(days=DEFAULT_RETENTION_DAYS),
     )
     session.add(clip)
