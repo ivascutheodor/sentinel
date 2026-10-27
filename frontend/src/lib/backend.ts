@@ -60,13 +60,28 @@ export function parseEvent(value: unknown, now = Date.now() / 1000): SecurityEve
     description: 'This event was registered by the monitoring service.',
   }
 
-  // server/server.py currently returns this compact event response.
-  if (!Object.hasOwn(raw, 'clips') && !Object.hasOwn(raw, 'started_at')) {
+  // The authenticated server returns one recording with optional capture metadata.
+  if (!Object.hasOwn(raw, 'clips')) {
     if (raw.video_path !== null && typeof raw.video_path !== 'string') return invalidResponse()
-    const url = recordingUrl(raw.video_path as string | null)
+    const hasCapture = Object.hasOwn(raw, 'started_at')
+    if (hasCapture && (!['capturing', 'completed', 'interrupted'].includes(text(raw.status))
+      || (raw.clip_status !== null && !['pending', 'ready', 'failed', 'deleting', 'deleted'].includes(text(raw.clip_status))))) return invalidResponse()
+    const status = hasCapture ? raw.clip_status as string | null : 'unknown'
+    const url = status === 'ready' || status === 'unknown' ? recordingUrl(raw.video_path as string | null) : null
     return {
-      ...base, ts: timestamp(raw.created_at), timestampLabel: 'Registered',
-      clips: raw.video_path ? [{ id: `${id}-recording`, status: url ? 'unknown' : 'unavailable', url }] : [],
+      ...base,
+      ts: timestamp(hasCapture ? raw.started_at : raw.created_at),
+      timestampLabel: hasCapture ? 'Started' : 'Registered',
+      ...(hasCapture ? {
+        captureStatus: raw.status as string,
+        description: `Person-presence capture ${raw.status}.`,
+        closedAt: raw.closed_at === null ? undefined : timestamp(raw.closed_at),
+      } : {}),
+      clips: raw.video_path || (hasCapture && status !== null) ? [{
+        id: `${id}-recording`,
+        status: (status === 'ready' || status === 'unknown') && !url ? 'unavailable' : status ?? 'unavailable',
+        url,
+      }] : [],
     }
   }
 

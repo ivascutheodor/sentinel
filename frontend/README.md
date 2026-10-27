@@ -14,16 +14,18 @@ Open `http://localhost:5173`. The root page is sign-in; authenticated views are 
 
 The integration targets the authenticated application in **`backend/server/server.py` on `main`**. That application has the login, current-user, logout, events, and video routes used here. `backend/app/main.py` currently exposes a different application without the auth routes; the two entry points are not interchangeable.
 
-`feat/frontend` has not yet incorporated the backend commits from `main`. No backend files were merged or edited during this integration. Run the up-to-date backend from a separate `main` checkout/worktree, or have its owner bring those changes into your branch before starting it. In that backend checkout, configure its `.env` from its current `.env.example`, including `WORKER_API_KEY`, then use its setup commands:
+`feat/frontend` now includes the backend updates from `origin/main`. Both applications can run from this checkout. Configure `backend/.env` using its current `.env.example`, including `POSTGRES_PASSWORD` and `WORKER_API_KEY`, then use these commands in a separate terminal:
 
 ```bash
 cd backend
 uv sync
+docker compose up -d sentinel-db
+# Wait for PostgreSQL to be ready before applying migrations.
 uv run alembic upgrade head
 uv run fastapi dev server/server.py --host 0.0.0.0 --port 8000
 ```
 
-PostgreSQL must already be running. The username migration on `main` must be applied. Create an actual account using the API branch's command if one does not exist:
+The username migration must be applied. Create an actual account from `backend/` if one does not exist:
 
 ```bash
 uv run python -m server.create_user your_username "Your Name" --admin
@@ -51,7 +53,7 @@ The dashboard loads identity and event history separately instead of calling the
 
 ## Event and recording contracts
 
-`server/server.py` currently returns compact events: `{ id, camera_id, video_path, created_at }`. The frontend labels their timestamp **Registered**, keeps the actual camera UUID, and attempts playback through the existing filename-based video route. It does not claim that a returned path means the recording is ready, retained, or present on disk.
+`server/server.py` returns events with `id`, `camera_id`, `video_path`, `created_at`, `status`, `started_at`, `last_person_seen_at`, `closed_at`, `duration_seconds`, and `clip_status`. The frontend uses the actual start/end timestamps and capture status, labels the time **Started**, and offers playback only for a ready recording with a safe path. Pending, failed, deleting, and deleted recordings show their actual availability. This response does not include retention expiry, so the frontend does not infer it. Older compact responses containing only `id`, `camera_id`, `video_path`, and `created_at` remain supported with the timestamp label **Registered** and unknown recording readiness.
 
 The adapter also accepts the rich event/clip response exposed by `app/main.py`: capture states, actual start/end times, clip ordering, readiness, failure, and expiry are preserved. Pending, failed, deleting, deleted, expired, or unsafe media paths are not offered for playback. This richer response support does not supply missing authentication routes to that application.
 

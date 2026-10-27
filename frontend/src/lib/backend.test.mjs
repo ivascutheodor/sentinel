@@ -13,6 +13,7 @@ const flatEvent = { id: eventId, camera_id: cameraId, video_path: '/srv/recordin
 const now = Date.parse('2026-10-26T10:00:00Z') / 1000
 const clip = { id: clipId, part_number: 1, status: 'ready', filepath: '/srv/recordings/entrance 01.mp4', expires_at: '2026-10-27T10:00:00Z' }
 const richEvent = { id: eventId, camera_id: cameraId, event_type: 'person_presence', status: 'completed', started_at: '2026-10-20T09:00:00Z', last_person_seen_at: '2026-10-20T09:00:20Z', closed_at: '2026-10-20T09:00:30Z', end_reason: 'person_absent', created_at: '2026-10-20T10:00:00Z', clips: [clip] }
+const serverEvent = { ...flatEvent, status: 'completed', started_at: richEvent.started_at, last_person_seen_at: richEvent.last_person_seen_at, closed_at: richEvent.closed_at, duration_seconds: 30, clip_status: 'ready' }
 
 function mockFetch(t, respond) {
   const previous = globalThis.fetch
@@ -78,6 +79,29 @@ test('compact events preserve registration time without inventing severity, revi
   assert.deepEqual(parseEvent({ ...flatEvent, video_path: null }, now).clips, [])
 })
 
+test('current authenticated server events preserve capture times and single-recording readiness', () => {
+  const event = parseEvent(serverEvent, now)
+  assert.equal(event.ts, Date.parse(serverEvent.started_at) / 1000)
+  assert.equal(event.timestampLabel, 'Started')
+  assert.equal(event.captureStatus, 'completed')
+  assert.equal(event.closedAt, Date.parse(serverEvent.closed_at) / 1000)
+  assert.equal(event.clips[0].status, 'ready')
+  assert.equal(event.clips[0].url, '/api/v1/videos/entrance%2001.mp4')
+  for (const status of ['pending', 'failed', 'deleting', 'deleted']) {
+    for (const path of [null, serverEvent.video_path]) {
+      const clip = parseEvent({ ...serverEvent, clip_status: status, video_path: path }, now).clips[0]
+      assert.equal(clip.status, status)
+      assert.equal(clip.url, null)
+    }
+  }
+  assert.equal(parseEvent({ ...serverEvent, video_path: null }, now).clips[0].status, 'unavailable')
+  assert.deepEqual(parseEvent({ ...serverEvent, clip_status: null, video_path: null }, now).clips, [])
+  const active = parseEvent({ ...serverEvent, status: 'capturing', closed_at: null }, now)
+  assert.equal(active.captureStatus, 'capturing')
+  assert.equal(active.closedAt, undefined)
+  assert.equal(parseEvent({ ...serverEvent, status: 'interrupted' }, now).captureStatus, 'interrupted')
+})
+
 test('rich events preserve capture state, recording lifecycle, expiry, and clip ordering', () => {
   const event = parseEvent({ ...richEvent, clips: [
     { ...clip, id: '00000000-0000-4000-8000-000000000005', part_number: 2, status: 'pending', filepath: null }, clip,
@@ -109,8 +133,17 @@ test('malformed IDs, missing fields, naive timestamps, and unsupported states fa
     { ...flatEvent, id: 1 }, { ...flatEvent, camera_id: 'unknown' },
     { ...flatEvent, created_at: '2026-10-20T10:00:00' },
     { ...flatEvent, video_path: undefined }, { ...richEvent, status: 'done' },
+    { ...serverEvent, clip_status: 'streaming' }, { ...serverEvent, status: 'done' },
+    { ...serverEvent, closed_at: undefined }, { ...serverEvent, started_at: '2026-10-20T09:00:00' },
     { ...richEvent, clips: [{ ...clip, status: 'streaming' }] },
   ]) assert.throws(() => parseEvent(event, now), ApiError)
+})
+
+test('history and detail accept the current authenticated server response', async t => {
+  mockFetch(t, async () => Response.json(serverEvent))
+  assert.equal((await getEvent(eventId, new AbortController().signal)).timestampLabel, 'Started')
+  globalThis.fetch = async () => Response.json([serverEvent])
+  assert.equal((await getEvents(new AbortController().signal))[0].clips[0].status, 'ready')
 })
 
 test('events sort newest first and never require a camera-list response', async t => {
