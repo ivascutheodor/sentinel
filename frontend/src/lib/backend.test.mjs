@@ -1,0 +1,134 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import { api, ApiError } from './api.ts'
+import { parseUser, parseEvent, recordingUrl, getCurrentUser, getEvents, getEvent, deleteEvent, signOut } from './backend.ts'
+import { signIn, signInErrorMessage } from './auth.ts'
+
+const userId = '00000000-0000-4000-8000-000000000001'
+const cameraId = '00000000-0000-4000-8000-000000000002'
+const eventId = '00000000-0000-4000-8000-000000000003'
+const clipId = '00000000-0000-4000-8000-000000000004'
+const rawUser = { id: userId, username: 'front.desk', display_name: 'Front Desk', role: 'admin' }
+const flatEvent = { id: eventId, camera_id: cameraId, video_path: '/srv/recordings/entrance 01.mp4', created_at: '2026-10-20T10:00:00Z' }
+const now = Date.parse('2026-10-26T10:00:00Z') / 1000
+const clip = { id: clipId, part_number: 1, status: 'ready', filepath: '/srv/recordings/entrance 01.mp4', expires_at: '2026-10-27T10:00:00Z' }
+const richEvent = { id: eventId, camera_id: cameraId, event_type: 'person_presence', status: 'completed', started_at: '2026-10-20T09:00:00Z', last_person_seen_at: '2026-10-20T09:00:20Z', closed_at: '2026-10-20T09:00:30Z', end_reason: 'person_absent', created_at: '2026-10-20T10:00:00Z', clips: [clip] }
+
+function mockFetch(t, respond) {
+  const previous = globalThis.fetch
+  globalThis.fetch = respond
+  t.after(() => { globalThis.fetch = previous })
+}
+
+test('user mapping uses username and server-assigned roles', () => {
+  assert.deepEqual(parseUser(rawUser), { id: userId, username: 'front.desk', name: 'Front Desk', role: 'administrator', initials: 'FD' })
+  assert.equal(parseUser({ ...rawUser, role: 'user' }).role, 'operator')
+  assert.throws(() => parseUser({ ...rawUser, role: 'owner' }), ApiError)
+  assert.throws(() => parseUser({ ...rawUser, username: undefined, email: 'admin@test.invalid' }), ApiError)
+})
+
+test('login sends the exact API contract and preserves password whitespace', async t => {
+  mockFetch(t, async (url, options) => {
+    assert.equal(url, '/api/v1/auth/login')
+    assert.equal(options.method, 'POST')
+    assert.equal(options.credentials, 'same-origin')
+    assert.equal(options.cache, 'no-store')
+    assert.equal(options.headers.has('X-API-Key'), false)
+    assert.deepEqual(JSON.parse(options.body), { username: 'front.desk', password: '  password with spaces  ' })
+    return Response.json(rawUser)
+  })
+  await signIn({ username: '  FRONT.DESK  ', password: '  password with spaces  ' }, new AbortController().signal)
+})
+
+test('login rejects a malformed success response', async t => {
+  mockFetch(t, async () => Response.json({ ok: true }))
+  await assert.rejects(signIn({ username: 'front.desk', password: 'password' }, new AbortController().signal), error => error.status === 502)
+})
+
+test('auth and event operations use supported paths/methods, including 204 responses', async t => {
+  const calls = []
+  mockFetch(t, async (url, options) => {
+    calls.push([url, options.method ?? 'GET'])
+    if (url.endsWith('/auth/me')) return Response.json(rawUser)
+    if (url.endsWith('/events')) return Response.json([flatEvent])
+    if (options.method === 'DELETE' || url.endsWith('/auth/logout')) return new Response(null, { status: 204 })
+    return Response.json(flatEvent)
+  })
+  const signal = new AbortController().signal
+  assert.equal((await getCurrentUser(signal)).username, 'front.desk')
+  assert.equal((await getEvents(signal)).length, 1)
+  assert.equal((await getEvent(eventId, signal)).cameraId, cameraId)
+  await deleteEvent(eventId, signal)
+  await signOut()
+  assert.deepEqual(calls, [
+    ['/api/v1/auth/me', 'GET'], ['/api/v1/events', 'GET'],
+    [`/api/v1/events/${eventId}`, 'GET'], [`/api/v1/events/${eventId}`, 'DELETE'],
+    ['/api/v1/auth/logout', 'POST'],
+  ])
+})
+
+test('compact events preserve registration time without inventing severity, review, or clip readiness', () => {
+  const event = parseEvent(flatEvent, now)
+  assert.equal(event.ts, Date.parse(flatEvent.created_at) / 1000)
+  assert.equal(event.timestampLabel, 'Registered')
+  assert.equal(event.clips[0].url, '/api/v1/videos/entrance%2001.mp4')
+  assert.equal(event.clips[0].status, 'unknown')
+  assert.equal(event.severity, undefined)
+  assert.equal(event.reviewed, undefined)
+  assert.deepEqual(parseEvent({ ...flatEvent, video_path: null }, now).clips, [])
+})
+
+test('rich events preserve capture state, recording lifecycle, expiry, and clip ordering', () => {
+  const event = parseEvent({ ...richEvent, clips: [
+    { ...clip, id: '00000000-0000-4000-8000-000000000005', part_number: 2, status: 'pending', filepath: null }, clip,
+  ] }, now)
+  assert.equal(event.timestampLabel, 'Started')
+  assert.equal(event.ts, Date.parse(richEvent.started_at) / 1000)
+  assert.equal(event.captureStatus, 'completed')
+  assert.equal(event.closedAt, Date.parse(richEvent.closed_at) / 1000)
+  assert.deepEqual(event.clips.map(clip => clip.partNumber), [1, 2])
+  assert.equal(event.clips[1].url, null)
+  for (const status of ['pending', 'failed', 'deleting', 'deleted']) {
+    assert.equal(parseEvent({ ...richEvent, clips: [{ ...clip, status }] }, now).clips[0].url, null)
+  }
+  const expired = parseEvent(richEvent, Date.parse('2026-10-28T10:00:00Z') / 1000).clips[0]
+  assert.equal(expired.status, 'expired')
+  assert.equal(expired.url, null)
+})
+
+test('media URLs are same-origin, escaped single filenames and reject unsafe paths', () => {
+  assert.equal(recordingUrl('C:\\recordings\\entrée #1.mp4'), '/api/v1/videos/entr%C3%A9e%20%231.mp4')
+  assert.equal(recordingUrl('recordings/a&b.mp4'), '/api/v1/videos/a%26b.mp4')
+  for (const path of [null, '', '../private.mp4', '/recordings/../private.mp4', 'https://evil.test/video.mp4', 'file:///private.mp4', 'clip\u0000.mp4', '/recordings/']) {
+    assert.equal(recordingUrl(path), null, String(path))
+  }
+})
+
+test('malformed IDs, missing fields, naive timestamps, and unsupported states fail explicitly', () => {
+  for (const event of [
+    { ...flatEvent, id: 1 }, { ...flatEvent, camera_id: 'unknown' },
+    { ...flatEvent, created_at: '2026-10-20T10:00:00' },
+    { ...flatEvent, video_path: undefined }, { ...richEvent, status: 'done' },
+    { ...richEvent, clips: [{ ...clip, status: 'streaming' }] },
+  ]) assert.throws(() => parseEvent(event, now), ApiError)
+})
+
+test('events sort newest first and never require a camera-list response', async t => {
+  mockFetch(t, async () => Response.json([flatEvent, { ...flatEvent, id: clipId, camera_id: clipId, created_at: '2026-10-21T10:00:00+00:00' }]))
+  const events = await getEvents(new AbortController().signal)
+  assert.deepEqual(events.map(event => event.id), [clipId, eventId])
+})
+
+test('HTTP errors keep status, cancellation propagates, and failed reads do not look successful', async t => {
+  mockFetch(t, async () => Response.json({ detail: 'Not authenticated' }, { status: 401 }))
+  await assert.rejects(getCurrentUser(new AbortController().signal), error => error instanceof ApiError && error.status === 401)
+  globalThis.fetch = async () => new Response('<html>wrong server</html>', { status: 200 })
+  await assert.rejects(api('/auth/me'), error => error.status === 502)
+  globalThis.fetch = async () => { throw new TypeError('Network unavailable') }
+  await assert.rejects(api('/auth/me'), error => error.status === 0)
+  const controller = new AbortController()
+  controller.abort()
+  globalThis.fetch = async () => { throw controller.signal.reason }
+  await assert.rejects(api('/auth/me', { signal: controller.signal }), error => error.name === 'AbortError')
+  assert.match(signInErrorMessage(new ApiError('technical', 401)), /username or password/)
+})

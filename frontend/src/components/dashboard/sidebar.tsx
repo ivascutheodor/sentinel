@@ -1,14 +1,12 @@
-import { LayoutDashboard, ListChecks, ShieldCheck, Video } from 'lucide-react'
-import type { User } from '@/lib/data'
+import { LayoutDashboard, ListChecks, ShieldCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export type Section = 'dashboard' | 'cameras' | 'events' | 'settings'
-export function Sidebar({ user, section, onNavigate }: {
-  user?: User; section: Section; onNavigate: (section: Section) => void
+export function Sidebar({ section, onNavigate }: {
+  section: Section; onNavigate: (section: Section) => void
 }) {
   const items = [
     { key: 'dashboard' as const, label: 'Dashboard', icon: LayoutDashboard },
-    ...(user?.role === 'administrator' ? [{ key: 'cameras' as const, label: 'Cameras', icon: Video }] : []),
     { key: 'events' as const, label: 'Events', icon: ListChecks },
   ]
   return <aside className="flex w-16 shrink-0 flex-col border-r bg-panel xl:w-60">

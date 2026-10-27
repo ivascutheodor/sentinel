@@ -1,21 +1,21 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { ArrowRight, CircleAlert, Eye, EyeOff, LoaderCircle, LockKeyhole, Mail, ShieldCheck } from 'lucide-react'
+import { ArrowRight, CircleAlert, Eye, EyeOff, LoaderCircle, LockKeyhole, UserRound, ShieldCheck } from 'lucide-react'
 import { signIn, signInErrorMessage } from '@/lib/auth'
 import { cn } from '@/lib/utils'
 
 interface FieldErrors {
-  email?: string
+  username?: string
   password?: string
 }
 
 export function Login({ onSuccess }: { onSuccess: () => void }) {
-  const [email, setEmail] = useState('')
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
-  const emailInput = useRef<HTMLInputElement>(null)
+  const usernameInput = useRef<HTMLInputElement>(null)
   const passwordInput = useRef<HTMLInputElement>(null)
   const request = useRef<AbortController | null>(null)
 
@@ -26,16 +26,16 @@ export function Login({ onSuccess }: { onSuccess: () => void }) {
     if (request.current) return
 
     const errors: FieldErrors = {}
-    const normalizedEmail = email.trim().toLowerCase()
-    if (!normalizedEmail) errors.email = 'Enter your email address.'
-    else if (normalizedEmail.length < 3 || normalizedEmail.length > 254 || emailInput.current?.validity.typeMismatch) {
-      errors.email = 'Enter a valid email address.'
+    const normalizedUsername = username.trim().toLowerCase()
+    if (!normalizedUsername) errors.username = 'Enter your username.'
+    else if (!/^[a-z0-9._-]{3,50}$/.test(normalizedUsername)) {
+      errors.username = 'Use 3–50 letters, numbers, dots, underscores or hyphens.'
     }
     if (!password.length) errors.password = 'Enter your password.'
     setFieldErrors(errors)
     setError('')
-    if (errors.email || errors.password) {
-      if (errors.email) emailInput.current?.focus()
+    if (errors.username || errors.password) {
+      if (errors.username) usernameInput.current?.focus()
       else passwordInput.current?.focus()
       return
     }
@@ -44,7 +44,7 @@ export function Login({ onSuccess }: { onSuccess: () => void }) {
     request.current = controller
     setBusy(true)
     try {
-      await signIn({ email: normalizedEmail, password }, AbortSignal.any([
+      await signIn({ username: normalizedUsername, password }, AbortSignal.any([
         controller.signal, AbortSignal.timeout(15_000),
       ]))
       if (!controller.signal.aborted) {
@@ -81,31 +81,31 @@ export function Login({ onSuccess }: { onSuccess: () => void }) {
 
           <form onSubmit={submit} noValidate aria-labelledby="sign-in-heading" aria-describedby="sign-in-description" aria-busy={busy} className="space-y-5">
             <div>
-              <label htmlFor="login-email" className="mb-2 block text-sm font-medium">Email address</label>
+              <label htmlFor="login-username" className="mb-2 block text-sm font-medium">Username</label>
               <div className="relative">
-                <Mail className="pointer-events-none absolute left-3.5 top-4 size-4 text-muted-foreground" aria-hidden="true" />
+                <UserRound className="pointer-events-none absolute left-3.5 top-4 size-4 text-muted-foreground" aria-hidden="true" />
                 <input
-                  ref={emailInput}
-                  id="login-email"
-                  name="email"
-                  type="email"
-                  inputMode="email"
+                  ref={usernameInput}
+                  id="login-username"
+                  name="username"
+                  type="text"
+                  inputMode="text"
                   autoComplete="username"
                   autoCapitalize="none"
                   autoCorrect="off"
                   spellCheck={false}
-                  maxLength={254}
+                  maxLength={50}
                   required
                   disabled={busy}
-                  value={email}
-                  onChange={event => { setEmail(event.target.value); setFieldErrors(previous => ({ ...previous, email: undefined })); setError('') }}
-                  onBlur={() => setEmail(value => value.trim().toLowerCase())}
-                  aria-invalid={Boolean(fieldErrors.email)}
-                  aria-describedby={fieldErrors.email ? 'login-email-error' : undefined}
-                  className={cn(fieldClass, 'pr-3', fieldErrors.email && 'border-critical/70')}
+                  value={username}
+                  onChange={event => { setUsername(event.target.value); setFieldErrors(previous => ({ ...previous, username: undefined })); setError('') }}
+                  onBlur={() => setUsername(value => value.trim().toLowerCase())}
+                  aria-invalid={Boolean(fieldErrors.username)}
+                  aria-describedby={fieldErrors.username ? 'login-username-error' : undefined}
+                  className={cn(fieldClass, 'pr-3', fieldErrors.username && 'border-critical/70')}
                 />
               </div>
-              {fieldErrors.email && <p id="login-email-error" className="mt-2 text-xs text-critical">{fieldErrors.email}</p>}
+              {fieldErrors.username && <p id="login-username-error" className="mt-2 text-xs text-critical">{fieldErrors.username}</p>}
             </div>
 
             <div>

@@ -1,19 +1,21 @@
-import { api, ApiError } from './api'
+import { api, ApiError } from './api.ts'
+import { parseUser } from './backend.ts'
 
 export interface SignInCredentials {
-  email: string
+  username: string
   password: string
 }
 
 export async function signIn(credentials: SignInCredentials, signal: AbortSignal): Promise<void> {
-  await api('/session', {
+  const response = await api<unknown>('/auth/login', {
     method: 'POST',
     signal,
     body: JSON.stringify({
-      email: credentials.email.trim().toLowerCase(),
+      username: credentials.username.trim().toLowerCase(),
       password: credentials.password,
     }),
   })
+  parseUser(response)
 }
 
 export function signInErrorMessage(error: unknown): string {
@@ -23,12 +25,12 @@ export function signInErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {
     switch (error.status) {
       case 401:
-        return 'The email or password is incorrect. Please try again.'
+        return 'The username or password is incorrect. Please try again.'
       case 403:
         return 'This account cannot access the workspace. Contact your administrator.'
       case 400:
       case 422:
-        return 'Check your email and password, then try again.'
+        return 'Check your username and password, then try again.'
       case 429:
         return 'Too many sign-in attempts. Please wait before trying again.'
       case 404:

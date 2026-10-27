@@ -39,24 +39,27 @@ export interface Camera {
 export interface SecurityEvent {
   id: string
   cameraId: string
-  severity: Severity
+  severity?: Severity
   title: string
   description: string
   zoneName?: string
   confidence?: number
   captureStatus?: string
   snapshotUrl?: string
-  clips: { id: string; status: string; url: string | null }[]
+  clips: { id: string; status: string; url: string | null; partNumber?: number }[]
   dwell?: string
   box?: Box
   ts: number
-  reviewed: boolean
+  timestampLabel: 'Registered' | 'Started'
+  closedAt?: number
+  endReason?: string
   isNew?: boolean
 }
 
 export interface User {
+  id: string
   name: string
-  email: string
+  username: string
   role: Role
   initials: string
 }

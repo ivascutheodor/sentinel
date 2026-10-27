@@ -5,9 +5,10 @@ import { cn } from '@/lib/utils'
 import { SEVERITY_META } from './severity'
 
 interface SnapshotProps {
-  camera: Camera
+  camera?: Camera
+  image?: string
   box?: Box
-  severity: Severity
+  severity?: Severity
   aspect?: number
   zoom?: number
   showBox?: boolean
@@ -17,11 +18,12 @@ interface SnapshotProps {
 const clamp = (v: number, min: number, max: number) => Math.min(Math.max(v, min), max)
 
 export function Snapshot(props: SnapshotProps) {
-  return <SnapshotContent key={props.camera.image ?? ''} {...props} />
+  return <SnapshotContent key={props.image ?? props.camera?.image ?? ''} {...props} />
 }
 
 function SnapshotContent({
   camera,
+  image = camera?.image,
   box = [0, 0, FRAME_W, FRAME_H],
   severity,
   aspect = 0.75,
@@ -39,9 +41,9 @@ function SnapshotContent({
   }
   const left = clamp(x + w / 2 - cropW / 2, 0, FRAME_W - cropW)
   const top = clamp(y + h / 2 - cropH / 2, 0, FRAME_H - cropH)
-  const color = SEVERITY_META[severity].color
-  const unavailable = !camera.image || status === 'error'
-  const loading = Boolean(camera.image && status === 'loading')
+  const color = severity ? SEVERITY_META[severity].color : 'var(--primary)'
+  const unavailable = !image || status === 'error'
+  const loading = Boolean(image && status === 'loading')
 
   return (
     <div
@@ -53,14 +55,14 @@ function SnapshotContent({
       {!unavailable ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={camera.image}
+          src={image}
           alt=""
           onLoad={() => setStatus('ready')}
           onError={() => setStatus('error')}
           className={cn(
             'absolute max-w-none select-none',
             loading && 'opacity-0',
-            camera.status === 'disconnected' && 'grayscale brightness-75',
+            camera?.status === 'disconnected' && 'grayscale brightness-75',
           )}
           style={{
             width: `${(FRAME_W / cropW) * 100}%`,

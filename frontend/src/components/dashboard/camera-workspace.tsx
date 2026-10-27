@@ -37,7 +37,6 @@ interface CameraWorkspaceProps {
   onExpand: (id: string | null) => void
   highlightedCameraId: string | null
   eventsOpen: boolean
-  unreviewedCount: number
   onOpenEvents: () => void
 }
 
@@ -49,7 +48,6 @@ export function CameraWorkspace({
   onExpand,
   highlightedCameraId,
   eventsOpen,
-  unreviewedCount,
   onOpenEvents,
 }: CameraWorkspaceProps) {
   const visible = cameras.filter((c) => visibleIds.includes(c.id))
@@ -202,11 +200,7 @@ export function CameraWorkspace({
             >
               <PanelRightOpen className="size-3.5" aria-hidden="true" />
               Events
-              {unreviewedCount > 0 && (
-                <span className="rounded-full bg-primary px-1.5 text-[10px] font-semibold leading-4 text-primary-foreground">
-                  {unreviewedCount}
-                </span>
-              )}
+
             </button>
           )}
         </div>
