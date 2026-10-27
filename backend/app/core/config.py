@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     # Must be True once the API is served over HTTPS; browsers drop Secure cookies on plain http.
     session_cookie_secure: bool = False
 
+    # JSON array of exact browser origins, including the frontend port.
+    cors_allowed_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
+
     # Shared secret the worker sends in the X-API-Key header to create events.
     worker_api_key: SecretStr
 

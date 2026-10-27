@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { api, ApiError } from './api.ts'
+import { api, apiUrl, resolveApiOrigin, ApiError } from './api.ts'
 import { parseUser, parseEvent, recordingUrl, getCurrentUser, getEvents, getEvent, deleteEvent, signOut } from './backend.ts'
 import { signIn, signInErrorMessage } from './auth.ts'
 
@@ -30,9 +30,9 @@ test('user mapping uses username and server-assigned roles', () => {
 
 test('login sends the exact API contract and preserves password whitespace', async t => {
   mockFetch(t, async (url, options) => {
-    assert.equal(url, '/api/v1/auth/login')
+    assert.equal(url, 'http://localhost:8000/api/v1/auth/login')
     assert.equal(options.method, 'POST')
-    assert.equal(options.credentials, 'same-origin')
+    assert.equal(options.credentials, 'include')
     assert.equal(options.cache, 'no-store')
     assert.equal(options.headers.has('X-API-Key'), false)
     assert.deepEqual(JSON.parse(options.body), { username: 'front.desk', password: '  password with spaces  ' })
@@ -62,9 +62,9 @@ test('auth and event operations use supported paths/methods, including 204 respo
   await deleteEvent(eventId, signal)
   await signOut()
   assert.deepEqual(calls, [
-    ['/api/v1/auth/me', 'GET'], ['/api/v1/events', 'GET'],
-    [`/api/v1/events/${eventId}`, 'GET'], [`/api/v1/events/${eventId}`, 'DELETE'],
-    ['/api/v1/auth/logout', 'POST'],
+    ['http://localhost:8000/api/v1/auth/me', 'GET'], ['http://localhost:8000/api/v1/events', 'GET'],
+    [`http://localhost:8000/api/v1/events/${eventId}`, 'GET'], [`http://localhost:8000/api/v1/events/${eventId}`, 'DELETE'],
+    ['http://localhost:8000/api/v1/auth/logout', 'POST'],
   ])
 })
 
@@ -72,7 +72,7 @@ test('compact events preserve registration time without inventing severity, revi
   const event = parseEvent(flatEvent, now)
   assert.equal(event.ts, Date.parse(flatEvent.created_at) / 1000)
   assert.equal(event.timestampLabel, 'Registered')
-  assert.equal(event.clips[0].url, '/api/v1/videos/entrance%2001.mp4')
+  assert.equal(event.clips[0].url, 'http://localhost:8000/api/v1/videos/entrance%2001.mp4')
   assert.equal(event.clips[0].status, 'unknown')
   assert.equal(event.severity, undefined)
   assert.equal(event.reviewed, undefined)
@@ -86,7 +86,7 @@ test('current authenticated server events preserve capture times and single-reco
   assert.equal(event.captureStatus, 'completed')
   assert.equal(event.closedAt, Date.parse(serverEvent.closed_at) / 1000)
   assert.equal(event.clips[0].status, 'ready')
-  assert.equal(event.clips[0].url, '/api/v1/videos/entrance%2001.mp4')
+  assert.equal(event.clips[0].url, 'http://localhost:8000/api/v1/videos/entrance%2001.mp4')
   for (const status of ['pending', 'failed', 'deleting', 'deleted']) {
     for (const path of [null, serverEvent.video_path]) {
       const clip = parseEvent({ ...serverEvent, clip_status: status, video_path: path }, now).clips[0]
@@ -120,9 +120,9 @@ test('rich events preserve capture state, recording lifecycle, expiry, and clip 
   assert.equal(expired.url, null)
 })
 
-test('media URLs are same-origin, escaped single filenames and reject unsafe paths', () => {
-  assert.equal(recordingUrl('C:\\recordings\\entrée #1.mp4'), '/api/v1/videos/entr%C3%A9e%20%231.mp4')
-  assert.equal(recordingUrl('recordings/a&b.mp4'), '/api/v1/videos/a%26b.mp4')
+test('media URLs use the configured API origin, escaped single filenames and reject unsafe paths', () => {
+  assert.equal(recordingUrl('C:\\recordings\\entrée #1.mp4'), 'http://localhost:8000/api/v1/videos/entr%C3%A9e%20%231.mp4')
+  assert.equal(recordingUrl('recordings/a&b.mp4'), 'http://localhost:8000/api/v1/videos/a%26b.mp4')
   for (const path of [null, '', '../private.mp4', '/recordings/../private.mp4', 'https://evil.test/video.mp4', 'file:///private.mp4', 'clip\u0000.mp4', '/recordings/']) {
     assert.equal(recordingUrl(path), null, String(path))
   }
@@ -164,4 +164,17 @@ test('HTTP errors keep status, cancellation propagates, and failed reads do not 
   globalThis.fetch = async () => { throw controller.signal.reason }
   await assert.rejects(api('/auth/me', { signal: controller.signal }), error => error.name === 'AbortError')
   assert.match(signInErrorMessage(new ApiError('technical', 401)), /username or password/)
+})
+
+
+test('API origins support Tailscale, private hosts, IPv6, and explicit deployment settings', () => {
+  assert.equal(resolveApiOrigin('', 'http://homie:5173/events'), 'http://homie:8000')
+  assert.equal(resolveApiOrigin(undefined, 'http://100.80.90.10:5173/login'), 'http://100.80.90.10:8000')
+  assert.equal(resolveApiOrigin('', 'http://[fd7a:115c:a1e0::1]:5173'), 'http://[fd7a:115c:a1e0::1]:8000')
+  assert.equal(resolveApiOrigin('https://sentinel.internal:8443/', 'https://sentinel.internal:5173'), 'https://sentinel.internal:8443')
+  assert.equal(resolveApiOrigin('  http://homie:8001  ', 'http://homie:5173'), 'http://homie:8001')
+  for (const origin of ['file:///private', 'http://user:password@homie:8000', 'http://homie:8000/api/v1', 'http://homie:8000/?token=secret']) {
+    assert.throws(() => resolveApiOrigin(origin, 'http://homie:5173'))
+  }
+  assert.equal(apiUrl('/auth/me'), 'http://localhost:8000/api/v1/auth/me')
 })

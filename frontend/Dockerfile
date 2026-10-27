@@ -9,6 +9,8 @@ COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 
 COPY . .
+ARG VITE_API_ORIGIN=
+ENV VITE_API_ORIGIN=${VITE_API_ORIGIN}
 RUN pnpm build
 
 # Production stage

@@ -1,4 +1,4 @@
-import { api, ApiError } from './api.ts'
+import { api, apiUrl, ApiError } from './api.ts'
 import type { SecurityEvent, User } from './data.ts'
 
 function invalidResponse(): never {
@@ -49,7 +49,7 @@ export function recordingUrl(path: string | null): string | null {
   const parts = path.replace(/\\/g, '/').split('/')
   if (parts.some(part => part === '.' || part === '..')) return null
   const filename = parts.at(-1)
-  return filename ? `/api/v1/videos/${encodeURIComponent(filename)}` : null
+  return filename ? apiUrl(`/videos/${encodeURIComponent(filename)}`) : null
 }
 
 export function parseEvent(value: unknown, now = Date.now() / 1000): SecurityEvent {

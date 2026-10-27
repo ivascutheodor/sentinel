@@ -48,10 +48,10 @@ app = FastAPI(title=settings.app_name, version=get_version(), debug=settings.deb
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=settings.cors_allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "DELETE"],
+    allow_headers=["Content-Type", "Range"],
 )
 
 PROJECT_ROOT = BACKEND_DIR.parent

@@ -18,6 +18,7 @@ function RecordingContent({ url }: { url: string }) {
     <div aria-label="Event recording" aria-busy={status === 'loading'} className="relative aspect-video overflow-hidden rounded-lg bg-black">
       <video
         ref={video}
+        crossOrigin="use-credentials"
         controls
         preload="metadata"
         src={url}

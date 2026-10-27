@@ -22,7 +22,7 @@ export function CameraTile({ camera, variant, highlighted, onExpand, onCollapse,
     let timer: ReturnType<typeof setTimeout>
     async function load() {
       try {
-        const response = await fetch(camera.image!, { credentials: 'same-origin', cache: 'no-store', signal: AbortSignal.any([controller.signal, AbortSignal.timeout(12_000)]) })
+        const response = await fetch(camera.image!, { credentials: 'include', cache: 'no-store', signal: AbortSignal.any([controller.signal, AbortSignal.timeout(12_000)]) })
         if (response.status === 401) window.dispatchEvent(new Event('sentinel-session-ended'))
         if (!response.ok) {
           const body = await response.json().catch(() => null)
