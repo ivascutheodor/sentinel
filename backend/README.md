@@ -164,7 +164,8 @@ The worker posts one event when a clip is finished. Only `camera_id` (the camera
     "model_ref": "yolo11n.pt",
     "detection_config": { "schema_version": 1, "region": null },
     "settings": { "pre_roll_seconds": 5, "post_roll_seconds": 5 }
-  }
+  },
+  "source_manifest_ref": "manifests/incident_2026-10-08_10-00-00.json"
 }
 ```
 
@@ -174,8 +175,24 @@ The backend decides the rest:
   reason listed in `/docs` gives an `interrupted` one.
 - The clip is `ready` when `size_bytes` and the recorded start/end are sent,
   otherwise `pending`.
-- `expires_at` is 7 days after saving; `source_manifest_ref` is a placeholder.
+- `expires_at` is `system_settings.retention_days` after saving.
 - Missing times fall back to "now"; a missing snapshot falls back to a default one.
+
+### Manifests
+
+For every clip the worker writes a manifest, `recordings/manifests/<clip name>.json`,
+before posting the event: the camera, the times, the config snapshot, and the video's
+size and SHA-256. It carries `"synced": false` until the backend has stored the event.
+
+When the request names a manifest (`source_manifest_ref`, always
+`manifests/<plain name>.json`), the backend verifies it before saving anything: the
+manifest must exist, name the same camera and file, and the clip on disk must have the
+same size and SHA-256. Any mismatch is a `422`, so a clip changed after recording is
+never stored as evidence. A verified clip keeps the manifest reference and its
+`sha256`. Without a manifest, the clip gets a `placeholder/<uuid>` reference and no hash.
+
+Posting the same clip twice returns `409`; the worker's `sync_manifests.py` treats that
+as "already stored" when it re-sends events that failed while the backend was down.
 
 Times must include a timezone. The three event times are sent together or not at
 all, and must be in order; the two recorded times likewise, with end after start.

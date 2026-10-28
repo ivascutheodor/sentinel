@@ -27,6 +27,7 @@ class Incident:
     end_reason: str  # "person_absent", or why it was cut short (see the `events` CHECK)
     recorded_start_at: datetime  # first frame in the file (includes pre-roll)
     recorded_end_at: datetime  # last frame in the file (includes post-roll)
+    frame_count: int  # frames written to the file
 
 
 def _utc_now() -> datetime:
@@ -71,6 +72,7 @@ class IncidentRecorder:
         self._last_person_seen_at: datetime | None = None
         self._recorded_start_at: datetime | None = None
         self._recorded_end_at: datetime | None = None
+        self._frame_count = 0
 
     @property
     def is_recording(self) -> bool:
@@ -115,6 +117,7 @@ class IncidentRecorder:
         self._started_at = self._presence_started_at
         self._last_person_seen_at = now
         self._recorded_start_at = self._buffer[0][0]
+        self._frame_count = 0
         for frame_time, past_frame in self._buffer:  # includes the current frame
             self._write(frame_time, past_frame)
 
@@ -122,6 +125,7 @@ class IncidentRecorder:
         assert self._writer is not None
         self._writer.write(frame)
         self._recorded_end_at = frame_time
+        self._frame_count += 1
 
     def _finish(self, end_reason: str) -> Incident:
         assert self._writer is not None and self.current_clip is not None
@@ -134,6 +138,7 @@ class IncidentRecorder:
             end_reason=end_reason,
             recorded_start_at=self._recorded_start_at,
             recorded_end_at=self._recorded_end_at,
+            frame_count=self._frame_count,
         )
         self._writer, self.current_clip = None, None
         return incident

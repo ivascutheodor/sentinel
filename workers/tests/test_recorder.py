@@ -87,3 +87,4 @@ def test_incident_times(tmp_path):
     assert incident.recorded_end_at == at(7)  # last post-roll frame
     assert incident.closed_at == at(9)  # the clock call in _finish(), after frame 8
     assert incident.end_reason == "person_absent"
+    assert incident.frame_count == 6  # frames 2..7

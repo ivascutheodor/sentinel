@@ -3,10 +3,10 @@ from pathlib import Path
 
 import cv2
 import imageio_ffmpeg
-import requests
 from ultralytics import YOLO
 
 from config import settings
+from manifest import manifest_ref, sync_manifest, write_manifest
 from recorder import Incident, IncidentRecorder
 from zone import foot_point, is_in_zone, load_zone
 
@@ -104,36 +104,17 @@ def build_config_snapshot(zone, fps: int) -> dict:
     }
 
 
-def report_incident(incident: Incident, config_snapshot: dict) -> None:
-    payload = {
-        "camera_id": settings.camera_id,
-        "video_path": incident.clip.name,
-        "started_at": incident.started_at.isoformat(),
-        "last_person_seen_at": incident.last_person_seen_at.isoformat(),
-        "closed_at": incident.closed_at.isoformat(),
-        "end_reason": incident.end_reason,
-        "config_snapshot": config_snapshot,
-    }
-    # Without a real size and time span the backend keeps the clip `pending`.
-    size = incident.clip.stat().st_size if incident.clip.exists() else 0
-    if size > 0 and incident.recorded_end_at > incident.recorded_start_at:
-        payload["size_bytes"] = size
-        payload["recorded_start_at"] = incident.recorded_start_at.isoformat()
-        payload["recorded_end_at"] = incident.recorded_end_at.isoformat()
-
-    try:
-        response = requests.post(
-            f"{settings.api_url}/events",
-            json=payload,
-            headers={"X-API-Key": settings.api_key},
-            timeout=5.0,
-        )
-        response.raise_for_status()
-        print(f"[API] Saved incident: {incident.clip.name}")
-    except requests.exceptions.HTTPError as e:
-        print(f"[API Error] {e.response.status_code} for {incident.clip.name}: {e.response.text}")
-    except requests.exceptions.RequestException as e:
-        print(f"[API Error] Could not reach the API for {incident.clip.name}: {e}")
+def report_incident(
+    incident: Incident, config_snapshot: dict, fps: int, frame_size: tuple[int, int]
+) -> None:
+    """Seals the clip in a manifest first, then sends it; a failed send is retried later."""
+    path = write_manifest(incident, settings.camera_id, config_snapshot, fps, frame_size)
+    result = sync_manifest(path, settings.api_url, settings.api_key)
+    if result.synced:
+        print(f"[API] Saved incident: {incident.clip.name} ({result.message})")
+    else:
+        print(f"[API Error] {incident.clip.name}: {result.message}")
+        print(f"[API Error] Kept in {manifest_ref(path)} with synced=false; run sync_manifests.py")
 
 
 def main() -> None:
@@ -178,7 +159,7 @@ def main() -> None:
         finished = recorder.update(raw_frame, someone_in_zone=intruders > 0)
         if finished:
             print(f"[INFO] Incident saved: {finished.clip}")
-            report_incident(finished, config_snapshot)
+            report_incident(finished, config_snapshot, fps, size)
 
         if settings.show_window:
             if recorder.is_recording:
@@ -194,7 +175,7 @@ def main() -> None:
     finished = recorder.close(end_reason)  # don't lose a clip if we quit mid-incident
     if finished:
         print(f"[INFO] Incident saved: {finished.clip}")
-        report_incident(finished, config_snapshot)
+        report_incident(finished, config_snapshot, fps, size)
     cap.release()
     cv2.destroyAllWindows()
     print("[INFO] Program finished.")
