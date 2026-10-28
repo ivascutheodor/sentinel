@@ -1,4 +1,3 @@
-import os
 from collections.abc import Iterator
 from datetime import datetime, timedelta
 from typing import Any
@@ -6,13 +5,11 @@ from uuid import UUID, uuid4
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import Connection, create_engine, func, insert, select
-from sqlalchemy.orm import Session
+from sqlalchemy import Connection, func, insert, select, update
 
 from app.api.deps import get_current_user
 from app.core.config import get_settings
-from app.db.models import Camera, Event, VideoClip
-from app.db.session import get_session
+from app.db.models import Camera, Event, SystemSettings, VideoClip
 from app.main import app
 
 EVENTS_URL = f"{get_settings().api_prefix}/events"
@@ -47,41 +44,16 @@ def event_payload(camera_name: str) -> dict[str, Any]:
 
 
 @pytest.fixture
-def db_connection() -> Iterator[Connection]:
-    database_url = os.environ.get("TEST_DATABASE_URL")
-    if not database_url:
-        pytest.skip("Set TEST_DATABASE_URL to run PostgreSQL integration tests")
-    engine = create_engine(database_url)
-    try:
-        with engine.connect() as connection:
-            transaction = connection.begin()
-            try:
-                yield connection
-            finally:
-                transaction.rollback()
-    finally:
-        engine.dispose()
-
-
-@pytest.fixture
-def db_client(db_connection: Connection, camera_name: str) -> Iterator[TestClient]:
+def db_client(db_app: None, db_connection: Connection, camera_name: str) -> Iterator[TestClient]:
     """A logged-in client whose requests run inside the rolled-back test transaction."""
     db_connection.execute(
         insert(Camera).values(name=camera_name, stream_url=f"rtsp://{camera_name}/stream")
     )
-
-    def override_session() -> Iterator[Session]:
-        # Request commits release a savepoint; the outer test transaction is rolled back.
-        with Session(bind=db_connection, join_transaction_mode="create_savepoint") as session:
-            yield session
-
-    app.dependency_overrides[get_session] = override_session
     app.dependency_overrides[get_current_user] = lambda: None
     try:
         with TestClient(app) as client:
             yield client
     finally:
-        app.dependency_overrides.pop(get_session, None)
         app.dependency_overrides.pop(get_current_user, None)
 
 
@@ -125,6 +97,20 @@ def test_create_read_and_delete_event(
     assert db_connection.scalar(select(Event.id).where(Event.id == event_id)) is None
     assert db_connection.scalar(select(func.count()).where(VideoClip.event_id == event_id)) == 0
     assert db_client.get(f"{EVENTS_URL}/{event_id}").status_code == 404
+
+
+def test_clip_expiry_uses_system_settings(
+    db_client: TestClient, db_connection: Connection, event_payload: dict[str, Any]
+) -> None:
+    db_connection.execute(update(SystemSettings).values(retention_days=3))
+
+    response = db_client.post(EVENTS_URL, json=event_payload, headers=WORKER_HEADERS)
+    assert response.status_code == 201, response.text
+    clip = response.json()["clips"][0]
+    retention = datetime.fromisoformat(clip["expires_at"]) - datetime.fromisoformat(
+        clip["created_at"]
+    )
+    assert abs(retention - timedelta(days=3)) < timedelta(minutes=1)
 
 
 def test_minimal_payload_is_stored_as_pending(

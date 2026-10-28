@@ -1,7 +1,7 @@
 # Sentinel — Project Context for Claude Code
 
-> Verified state: 2026-10-27, branch `refactor/single-backend-app` (uncommitted) on top of
-> `origin/main` @ `9347ddc`. It merges the two backend apps into `app/main.py` (4.1).
+> Verified state: 2026-10-28, branch `feat/system-settings-seed` (uncommitted) on top of
+> `origin/main` @ `e80169f` (PR #6: one backend app). It seeds `system_settings` (4.6).
 > This file is the single source of truth for an agent joining the repo: what the project is,
 > what works, what is broken, what comes next. Read it before changing code, and update it when
 > any of that changes.
@@ -35,10 +35,10 @@ push unless asked**) and a colleague (frontend; also committed backend code, see
 
 | Branch | State |
 |---|---|
-| `origin/main` @ `9347ddc` | PR #4 (auth), PR #5 (real event data), and the colleague's `5851cf9 fix: API endpoints`, which re-created a second app in `app/` (3 of its tests fail on `main`) |
-| `refactor/single-backend-app` (local, **uncommitted**) | Merges the two apps (4.1). All tests pass (41 + 1 Windows skip, with the DB) |
+| `origin/main` @ `e80169f` | PRs #4 (auth), #5 (real event data), #6 (one backend app + this file) |
+| `feat/system-settings-seed` (local, **uncommitted**) | Seeds `system_settings`, reads retention and session timeouts from it. 47 tests pass + 1 Windows skip (with the DB) |
 | `origin/feat/frontend` | Colleague's frontend, 9+ commits ahead of `main`, not merged. Also commits `.pnpm-store/` (should be git-ignored) |
-| local `feat/real-event-data`, `fix/worker-api-contract` | Fully merged; safe to delete with `git branch -d`. Their GitHub copies (and `feat/auth`) are already gone |
+| local `refactor/single-backend-app`, `feat/real-event-data`, `fix/worker-api-contract`; remote `refactor/single-backend-app` | Fully merged; safe to delete (`git branch -d`, `git push origin --delete`) |
 
 Check whether a branch is merged without merging it: `git fetch --prune`, then
 `git log --oneline origin/main..<branch>` (empty = nothing to lose) or
@@ -78,7 +78,8 @@ sentinel/
 │   │   ├── db/models/           <- 9 ORM models, one file each
 │   │   ├── db/schema.sql        <- design DDL; intent in comments; OUT OF DATE vs migrations
 │   │   └── .env                 <- empty leftover, delete
-│   ├── migrations/versions/     <- 2feed91c7392 (initial), ea5ce070565b (users.email -> username) = head
+│   ├── migrations/versions/     <- 2feed91c7392 (initial), ea5ce070565b (users.email -> username),
+│   │                               b7c1d9e4f2a6 (seed system_settings + no-delete triggers) = head
 │   ├── src/                     <- stray yolo*.pt copies, unused (git-ignored)
 │   └── tests/                   <- conftest (ENVIRONMENT=test), test_health, test_auth, test_security,
 │                                   test_event_create, test_videos, test_events (DB, needs TEST_DATABASE_URL)
@@ -139,7 +140,8 @@ uv run fastapi dev app/main.py --host 0.0.0.0     # docs at http://127.0.0.1:800
   unknown usernames still run a dummy verify. No rate limiting.
 - Sessions: opaque `secrets.token_urlsafe(32)` in the cookie; only its SHA-256 digest is stored
   (`user_sessions.token_hash`, 32 bytes). Absolute lifetime 12 h, idle timeout 30 min
-  (hardcoded `SESSION_*` in `app/api/deps.py`; `system_settings` has the same columns but no row).
+  (`system_settings.session_absolute_seconds` applied at login, `session_idle_seconds` checked
+  on every request, so changing it affects open sessions).
   `last_seen_at` is written at most once per 60 s.
 - `get_current_user` rejects revoked/expired/idle sessions and inactive users. Roles exist
   (`admin`, `user`) but **no endpoint checks the role yet**.
@@ -172,8 +174,9 @@ closed_at, end_reason, created_at, config_snapshot, clips[]`; each clip (`VideoC
 has every `video_clips` column (`filepath`, `status`, `size_bytes`, `expires_at`, ...).
 No `duration_seconds` and no camera name: the client computes the duration.
 
-Still fake: `expires_at = now + 7 days` (`DEFAULT_RETENTION_DAYS` in `app/api/events.py`),
-`source_manifest_ref = manifests/<uuid>.json` (never written).
+`expires_at = now + system_settings.retention_days` (read at save time; existing clips are not
+rewritten when it changes). Still fake: `source_manifest_ref = manifests/<uuid>.json` (never
+written).
 
 ### 4.5 Settings and `.env`
 
@@ -194,10 +197,16 @@ Keep values unquoted. Update `.env.example` (with empty secrets) whenever a vari
 - `postgresql+psycopg`, `pool_pre_ping=True`. `migrations/env.py` uses `app.db.session.engine`.
 - Docker: service `sentinel-db`, `postgres:18`, container `backend-sentinel-db-1`, port 5432,
   volume `postgres_data`. `docker compose down -v` **deletes the database**.
-- Head: `ea5ce070565b`. If `create_user` fails with `column users.username does not exist`, run
-  `uv run alembic upgrade head`.
-- Tables: `cameras`, `events`, `video_clips`, `media_jobs` (unused), `system_settings`
-  (**0 rows**), `users`, `user_sessions`, `camera_access` (unused), `audit_logs`, `alembic_version`.
+- Head: `b7c1d9e4f2a6`. Errors such as `column users.username does not exist` or
+  `system_settings row is missing` mean a migration was not applied: `uv run alembic upgrade head`.
+- Tables: `cameras`, `events`, `video_clips`, `media_jobs` (unused), `system_settings`,
+  `users`, `user_sessions`, `camera_access` (unused), `audit_logs`, `alembic_version`.
+- `system_settings`: exactly one row (`id = 1`), seeded by `b7c1d9e4f2a6` with the column
+  defaults (retention 7 d, pre/post roll 10 s, parts 60 s, confidence 0.60, session 43200 s,
+  idle 1800 s). Triggers reject `DELETE`/`TRUNCATE`; change it with `UPDATE`. Read through
+  `app/services/system_settings.get_system_settings(session)`. Used: `retention_days`,
+  `session_absolute_seconds`, `session_idle_seconds`. Not used yet: pre/post roll, clip parts,
+  confidence (the worker reads its own `.env`; see item 14 in section 8).
 
 ### 4.7 Constraints that will bite you
 
@@ -214,11 +223,12 @@ turns them into 409, other routes into 500.
   `recorded_end_at` (> start), `source_ready_at`; `deleting|deleted` need `delete_requested_at`;
   `failed` needs `failure_code`; `filepath` and `(event_id, part_number)` unique;
   `ON DELETE NO ACTION` from events (delete clips first).
-- `user_sessions.token_hash`: 32 bytes; `expires_at > created_at`.
+- `user_sessions.token_hash`: 32 bytes; `expires_at > created_at`, `last_seen_at >= created_at`.
+- `system_settings`: `id = 1`; `session_idle_seconds <= session_absolute_seconds` (lower both
+  together); retention and part length > 0; confidence in [0, 1].
 
 `schema.sql` describes protections **not implemented** in any migration: `updated_at` trigger,
-immutable `audit_logs`, clip/event transition triggers, immutable `config_snapshot`,
-`system_settings` seed.
+immutable `audit_logs`, clip/event transition triggers, immutable `config_snapshot`.
 
 ### 4.8 Backend commands
 
@@ -345,14 +355,21 @@ On 2026-10-27, after merging the apps (`refactor/single-backend-app`):
   (`video/mp4`) and anonymous 401, logout 204. Test rows removed afterwards.
 - One older event (2026-10-26 18:27) has no clip row; left as is.
 
+On 2026-10-28, `feat/system-settings-seed`:
+
+- Migration `b7c1d9e4f2a6`: upgrade → 1 row + 2 triggers; downgrade → 0 + 0; upgrade again →
+  1 + 2. `alembic check` clean. Manual `DELETE` and `TRUNCATE` both rejected.
+- `uv run pytest` with the DB: 47 passed, 1 skipped; without: 34 passed, 14 skipped. Ruff clean.
+  New `tests/test_system_settings.py` (seeded defaults, removal blocked, login lifetime and idle
+  timeout follow the row) and a retention test in `test_events.py`. The DB fixtures
+  (`db_connection`, `db_app`) moved to `tests/conftest.py`. The row kept its defaults afterwards.
+
 ---
 
 ## 8. What is left (prioritised; frontend UI excluded)
 
 **🔴 Do first**
-1. ~~Merge the two apps~~ — done on `refactor/single-backend-app` (4.1). Left: commit it, open
-   the PR, and tell the colleague: run `app/main.py`, the `POST /events` contract is the worker's,
-   their client-built `clips` contract is gone, `create_user` moved to `app.cli`.
+1. ~~Merge the two apps~~ — done, PR #6 merged.
 2. ~~Run all tests including the DB ones~~ — done (section 7).
 3. Keep this file in sync after each step.
 
@@ -370,7 +387,9 @@ On 2026-10-27, after merging the apps (`refactor/single-backend-app`):
 11. Ask the colleague: "mark event as reviewed"?
 
 **🟡 Data still fake**
-12. Migration seeding `system_settings` (id = 1); read retention and session timeouts from it.
+12. ~~Migration seeding `system_settings`; read retention and session timeouts from it~~ — done
+    on `feat/system-settings-seed` (4.6). No API to change the settings yet (admin endpoint,
+    audited, later).
 13. `source_manifest_ref`: real manifest or documented placeholder.
 14. Unique clip names (camera name + milliseconds or UUID).
 

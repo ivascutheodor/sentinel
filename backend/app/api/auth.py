@@ -4,7 +4,6 @@ from fastapi import APIRouter, Request, Response, status
 from sqlalchemy import select
 
 from app.api.deps import (
-    SESSION_ABSOLUTE_SECONDS,
     CurrentSessionDep,
     CurrentUserDep,
     SessionDep,
@@ -24,6 +23,7 @@ from app.db.enums import AuditOutcome
 from app.db.models import User, UserSession
 from app.schemas.auth import LoginRequest, UserResponse
 from app.services.audit import audit
+from app.services.system_settings import get_system_settings
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -55,6 +55,7 @@ def login(
     if password_needs_rehash(user.password_hash):
         user.password_hash = hash_password(credentials.password)
 
+    lifetime_seconds = get_system_settings(session).session_absolute_seconds
     now = datetime.now(UTC)
     token = new_session_token()
     session.add(
@@ -63,7 +64,7 @@ def login(
             token_hash=hash_session_token(token),
             created_at=now,
             last_seen_at=now,
-            expires_at=now + timedelta(seconds=SESSION_ABSOLUTE_SECONDS),
+            expires_at=now + timedelta(seconds=lifetime_seconds),
             user_agent=request.headers.get("user-agent"),
             last_ip=client_ip(request),
         )
@@ -74,7 +75,7 @@ def login(
     response.set_cookie(
         key=settings.session_cookie_name,
         value=token,
-        max_age=SESSION_ABSOLUTE_SECONDS,
+        max_age=lifetime_seconds,
         httponly=True,
         secure=settings.session_cookie_secure,
         samesite="lax",

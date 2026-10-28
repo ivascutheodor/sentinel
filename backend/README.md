@@ -71,20 +71,33 @@ uv run alembic check
 ## Database Foundation Scope
 
 The initial migration creates the tables, PostgreSQL enum types, constraints, and
-indexes represented by the SQLAlchemy models. The following database behavior
-remains follow-up work:
+indexes represented by the SQLAlchemy models.
+
+The `system_settings` table holds exactly one row (`id = 1`), the installation-wide
+settings. A migration inserts it with the column defaults (retention 7 days, sessions
+12 hours with a 30-minute idle timeout, ...), and triggers reject `DELETE` and
+`TRUNCATE` on it: change values with `UPDATE` instead. The API reads it for:
+
+- `retention_days`: the `expires_at` of each new clip. Changing it does not
+  rewrite clips that already exist.
+- `session_absolute_seconds`: the lifetime of a session, fixed at login.
+- `session_idle_seconds`: the inactivity timeout, checked on every request, so a
+  change also applies to sessions that are already open. The table requires it to
+  be at most `session_absolute_seconds`.
+
+`pre_roll_seconds`, `post_roll_seconds`, `clip_part_seconds` and
+`confidence_threshold` are not used yet: the worker still reads its own `.env`.
+
+The following database behavior remains follow-up work:
 
 - Automatically advancing `updated_at` on updates.
 - Rejecting `UPDATE`, `DELETE`, and `TRUNCATE` on audit logs.
 - Enforcing event and clip lifecycle transitions, including terminal states.
 - Preventing changes to an event's `config_snapshot`.
-- Seeding the `system_settings` singleton and preventing its removal. Currently,
-  its primary key and check constraint allow at most one row; a fresh database
-  contains no settings row.
 
 Comments in the schema and models that describe these protections express intended
-behavior. The current migration does not implement those protections, and
-`alembic check` does not verify them.
+behavior. The migrations do not implement those protections yet, and `alembic check`
+does not verify them.
 
 ## Accounts and Login
 

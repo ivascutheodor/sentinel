@@ -10,10 +10,9 @@ from app.api.deps import SessionDep, get_current_user, verify_worker_key
 from app.db.enums import CaptureState, EventType, VideoStatus
 from app.db.models import Camera, Event, VideoClip
 from app.schemas.events import EventCreate, EventResponse
+from app.services.system_settings import get_system_settings
 
 router = APIRouter(prefix="/events", tags=["Events"])
-
-DEFAULT_RETENTION_DAYS = 7
 
 # Stored when the worker sends no snapshot; satisfies the `events.config_snapshot` CHECK.
 DEFAULT_CONFIG_SNAPSHOT: dict = {
@@ -36,6 +35,8 @@ def create_event(event: EventCreate, session: SessionDep) -> Event:
     if camera is None:
         raise HTTPException(status_code=404, detail=f"Camera {event.camera_id!r} not found.")
 
+    # Read when the clip is saved; changing retention later does not rewrite existing clips.
+    retention = timedelta(days=get_system_settings(session).retention_days)
     now = datetime.now(UTC)
     # The `video_clips` CHECK only allows `ready` once the file's size and time span are known.
     is_ready = event.size_bytes is not None and event.recorded_start_at is not None
@@ -66,7 +67,7 @@ def create_event(event: EventCreate, session: SessionDep) -> Event:
                 recorded_start_at=event.recorded_start_at,
                 recorded_end_at=event.recorded_end_at,
                 source_ready_at=now if is_ready else None,
-                expires_at=now + timedelta(days=DEFAULT_RETENTION_DAYS),
+                expires_at=now + retention,
             )
         ],
     )

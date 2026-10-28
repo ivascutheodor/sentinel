@@ -13,11 +13,7 @@ from app.core.config import get_settings
 from app.core.security import hash_session_token
 from app.db.models import User, UserSession
 from app.db.session import get_session
-
-# Same values as the `system_settings` column defaults; read them from that row
-# once it is seeded.
-SESSION_ABSOLUTE_SECONDS = 43200
-SESSION_IDLE_SECONDS = 1800
+from app.services.system_settings import get_system_settings
 
 # `last_seen_at` is written at most this often, so video range requests don't
 # turn every chunk into a database write.
@@ -50,12 +46,17 @@ def get_current_session(request: Request, session: SessionDep) -> UserSession:
         .options(selectinload(UserSession.user))
         .where(UserSession.token_hash == hash_session_token(token))
     )
+    if user_session is None:
+        raise unauthorized()
+
+    # The absolute deadline was fixed at login (`expires_at`); the idle timeout is read
+    # now, so changing it in `system_settings` also applies to sessions already open.
+    idle_timeout = timedelta(seconds=get_system_settings(session).session_idle_seconds)
     now = datetime.now(UTC)
     if (
-        user_session is None
-        or user_session.revoked_at is not None
+        user_session.revoked_at is not None
         or user_session.expires_at <= now
-        or user_session.last_seen_at + timedelta(seconds=SESSION_IDLE_SECONDS) <= now
+        or user_session.last_seen_at + idle_timeout <= now
         or not user_session.user.is_active
     ):
         raise unauthorized()
