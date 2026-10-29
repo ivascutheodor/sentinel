@@ -1,15 +1,17 @@
 from datetime import UTC, datetime, timedelta
+from typing import Annotated
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import delete, select
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import AwareDatetime
+from sqlalchemy import delete, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 
 from app.api.deps import SessionDep, get_current_user, verify_worker_key
 from app.db.enums import CaptureState, EventType, VideoStatus
 from app.db.models import Camera, Event, VideoClip
-from app.schemas.events import EventCreate, EventResponse
+from app.schemas.events import EventCreate, EventPage, EventResponse
 from app.services.manifests import ManifestError, verify_manifest
 from app.services.system_settings import get_system_settings
 
@@ -22,6 +24,9 @@ DEFAULT_CONFIG_SNAPSHOT: dict = {
     "detection_config": {"schema_version": 1, "region": None},
     "settings": {},
 }
+
+# Loaded with every event we return: its clips, and its camera for `camera_name`.
+EVENT_LOAD_OPTIONS = (selectinload(Event.clips), selectinload(Event.camera))
 
 
 @router.post(
@@ -100,14 +105,48 @@ def create_event(event: EventCreate, session: SessionDep) -> Event:
 
 @router.get(
     "",
-    response_model=list[EventResponse],
+    response_model=EventPage,
     dependencies=[Depends(get_current_user)],
 )
-def list_events(session: SessionDep) -> list[Event]:
+def list_events(
+    session: SessionDep,
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    offset: Annotated[int, Query(ge=0)] = 0,
+    camera_id: UUID | None = None,
+    started_from: Annotated[
+        AwareDatetime | None, Query(description="Inclusive. Use `Z` or `%2B` for `+`.")
+    ] = None,
+    started_to: Annotated[AwareDatetime | None, Query(description="Exclusive.")] = None,
+) -> EventPage:
+    if started_from is not None and started_to is not None and started_from >= started_to:
+        raise HTTPException(status_code=422, detail="started_from must be before started_to.")
+
+    # Shared by the count and the page, so `total` always matches what can be paged through.
+    filters = []
+    if camera_id is not None:
+        filters.append(Event.camera_id == camera_id)
+    if started_from is not None:
+        filters.append(Event.started_at >= started_from)
+    if started_to is not None:
+        filters.append(Event.started_at < started_to)
+
+    total = session.scalar(select(func.count()).select_from(Event).where(*filters))
     statement = (
-        select(Event).options(selectinload(Event.clips)).order_by(Event.created_at.desc(), Event.id)
+        select(Event)
+        .where(*filters)
+        .options(*EVENT_LOAD_OPTIONS)
+        # `id` breaks ties, so an event can't appear on two pages or on none.
+        .order_by(Event.started_at.desc(), Event.id.desc())
+        .limit(limit)
+        .offset(offset)
     )
-    return list(session.scalars(statement).all())
+    items = session.scalars(statement).all()
+    return EventPage(
+        items=[EventResponse.model_validate(event) for event in items],
+        total=total,
+        limit=limit,
+        offset=offset,
+    )
 
 
 @router.get(
@@ -116,9 +155,7 @@ def list_events(session: SessionDep) -> list[Event]:
     dependencies=[Depends(get_current_user)],
 )
 def get_event(event_id: UUID, session: SessionDep) -> Event:
-    event = session.scalar(
-        select(Event).where(Event.id == event_id).options(selectinload(Event.clips))
-    )
+    event = session.scalar(select(Event).where(Event.id == event_id).options(*EVENT_LOAD_OPTIONS))
     if event is None:
         raise HTTPException(status_code=404, detail="Event not found.")
     return event

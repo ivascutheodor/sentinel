@@ -115,6 +115,7 @@ class EventResponse(BaseModel):
 
     id: UUID
     camera_id: UUID
+    camera_name: str
     event_type: EventType
     status: CaptureState
     started_at: datetime
@@ -124,3 +125,12 @@ class EventResponse(BaseModel):
     created_at: datetime
     config_snapshot: dict[str, JsonValue]
     clips: list[VideoClipResponse]
+
+
+class EventPage(BaseModel):
+    """One page of `GET /events`: `total` counts every matching event, not just `items`."""
+
+    items: list[EventResponse]
+    total: int
+    limit: int
+    offset: int

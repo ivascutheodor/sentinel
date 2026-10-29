@@ -136,7 +136,7 @@ All routes are under `API_PREFIX` (default `/api/v1`):
 | `POST /auth/logout` | logged in | revokes the session |
 | `GET /auth/me` | logged in | the current user |
 | `POST /events` | worker (`X-API-Key`) | save a finished incident clip |
-| `GET /events` | logged in | all events with their clips, newest first |
+| `GET /events` | logged in | one page of events with their clips, newest first (see below) |
 | `GET /events/{event_id}` | logged in | one event |
 | `DELETE /events/{event_id}` | logged in | delete an event and its clip rows (not the file) |
 | `GET /videos/{filename}` | logged in | stream a file from `recordings/` |
@@ -199,6 +199,32 @@ all, and must be in order; the two recorded times likewise, with end after start
 Unknown fields, unknown cameras and events, and bad input are rejected with `422`
 or `404`; database conflicts (for example the same clip file posted twice) return
 `409`.
+
+### Listing events
+
+`GET /events` returns one page, newest `started_at` first:
+
+```json
+{ "items": [ { "id": "...", "camera_name": "test_camera_01", "clips": [ ... ] } ],
+  "total": 412, "limit": 50, "offset": 100 }
+```
+
+`total` counts every event that matches the filters, not only the ones in `items`.
+Query parameters, all optional:
+
+| Parameter | Default | Meaning |
+|---|---|---|
+| `limit` | `50` | events per page, 1 to 200 |
+| `offset` | `0` | events to skip: page `n` (from 0) is `offset = n * limit` |
+| `camera_id` | | only this camera (its UUID) |
+| `started_from` | | `started_at >= started_from` (inclusive) |
+| `started_to` | | `started_at < started_to` (exclusive) |
+
+Times need a timezone. In a URL, `+` means a space, so send UTC with `Z`
+(`2026-10-08T10:00:00Z`) or encode `+` as `%2B`. Out-of-range values, a missing
+timezone, or `started_from >= started_to` return `422`.
+
+Every event also has `camera_name` next to `camera_id`.
 
 ## Tests
 
