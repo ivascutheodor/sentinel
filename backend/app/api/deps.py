@@ -1,4 +1,4 @@
-"""Dependencies shared by the routers: database session, current user, worker key."""
+"""Dependencies shared by the routers: database session, current user, admin, worker key."""
 
 import ipaddress
 import secrets
@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.core.config import get_settings
 from app.core.security import hash_session_token
+from app.db.enums import UserRole
 from app.db.models import User, UserSession
 from app.db.session import get_session
 from app.services.system_settings import get_system_settings
@@ -76,6 +77,18 @@ def get_current_user(user_session: CurrentSessionDep) -> User:
 
 
 CurrentUserDep = Annotated[User, Depends(get_current_user)]
+
+
+def require_admin(user: CurrentUserDep) -> User:
+    """401 if not logged in (from `get_current_user`), 403 if logged in without the role."""
+    if user.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Administrator role required."
+        )
+    return user
+
+
+AdminDep = Annotated[User, Depends(require_admin)]
 
 
 def verify_worker_key(x_api_key: Annotated[str | None, Header()] = None) -> None:

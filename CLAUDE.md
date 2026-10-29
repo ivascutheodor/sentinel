@@ -1,8 +1,9 @@
 # Sentinel — Project Context for Claude Code
 
-> Verified state: 2026-10-28, branch `feat/clip-manifests` (uncommitted) on top of
-> `origin/main` @ `2dd9ff8` (PR #7: system_settings). It adds clip manifests and the
-> `sync_manifests.py` recovery script (5.6).
+> Verified state: 2026-10-29, branch `feat/admin-api` (uncommitted) on top of `origin/main` @
+> `ba7f3e0` (`GET /events` pagination). It adds admin permissions, cameras, user management,
+> own password change, settings API, file-removing delete, a DB-checked audited video endpoint
+> and login rate limiting (4.2, 4.3).
 > This file is the single source of truth for an agent joining the repo: what the project is,
 > what works, what is broken, what comes next. Read it before changing code, and update it when
 > any of that changes.
@@ -37,8 +38,10 @@ push unless asked**) and a colleague (frontend; also committed backend code, see
 
 | Branch | State |
 |---|---|
-| `origin/main` @ `2dd9ff8` | PRs #4 (auth), #5 (real event data), #6 (one backend app + this file), #7 (system_settings seed) |
-| `feat/clip-manifests` (local, **uncommitted**) | Clip manifests, backend verification, recovery script. 64 backend tests + 1 Windows skip (with the DB), 14 worker tests |
+| `origin/main` @ `ba7f3e0` | PRs #4 (auth), #5 (real event data), #6 (one backend app + this file), #7 (system_settings seed), #8 (clip manifests); then `GET /events` pagination committed **directly** to `main` (no PR) |
+| `feat/admin-api` (local, **uncommitted**) | Items 5–10 and the settings API of section 8. 159 backend tests + 1 Windows skip (with the DB). New migration `01f7729daa10` |
+| `origin/fix/frontend-events-page` (git worktree at `E:\sentinel-frontend`) | Committed + pushed: `getEvents` reads `items` from the envelope. Needs a PR into `feat/frontend`; until then the colleague's frontend can't read `GET /events` from `main` |
+| local `feat/events-pagination` | Never committed to (still at `67058f2`); its work went to `main`. Safe to delete |
 | `origin/feat/frontend` | Colleague's frontend, 9+ commits ahead of `main`, not merged. Also commits `.pnpm-store/` (should be git-ignored) |
 | local `refactor/single-backend-app`, `feat/real-event-data`, `fix/worker-api-contract`; remote `refactor/single-backend-app`, `feat/system-settings-seed` | Fully merged; safe to delete (`git branch -d`, `git push origin --delete`) |
 
@@ -65,17 +68,26 @@ sentinel/
 │   ├── alembic.ini, compose.yaml, pyproject.toml, uv.lock, README.md
 │   ├── app/
 │   │   ├── main.py              <- THE FastAPI app: lifespan (dev camera seed), CORS, routers, /health
-│   │   ├── api/deps.py          <- SessionDep, get_current_session/user, verify_worker_key, session timings
-│   │   ├── api/auth.py          <- /auth/login, /auth/logout, /auth/me
-│   │   ├── api/events.py        <- /events (worker POST, logged-in GET/DELETE)
-│   │   ├── api/videos.py        <- /videos/{filename} (logged in)
+│   │   ├── api/deps.py          <- SessionDep, get_current_session/user, require_admin/AdminDep,
+│   │   │                           verify_worker_key, session timings
+│   │   ├── api/auth.py          <- /auth/login (rate limited), /auth/logout, /auth/me, /auth/password
+│   │   ├── api/events.py        <- /events (worker POST, logged-in GET, admin DELETE)
+│   │   ├── api/videos.py        <- /videos/{filename} (logged in; ready + unexpired clips; audited)
+│   │   ├── api/cameras.py       <- /cameras (list: logged in; detail/create/edit: admin)
+│   │   ├── api/users.py         <- /users (admin): list, create, edit, reset password
+│   │   ├── api/settings.py      <- /settings (admin): read and change system_settings
 │   │   ├── schemas/auth.py      <- LoginRequest, UserResponse
+│   │   ├── schemas/cameras.py, users.py, settings.py <- request/response models for those routers
 │   │   ├── schemas/events.py    <- ConfigSnapshot, EventCreate (worker contract), EventResponse
 │   │   ├── schemas/manifests.py <- ManifestRef pattern, ClipManifest (what the backend checks)
 │   │   ├── services/audit.py    <- audit() helper for audit_logs rows
 │   │   ├── services/manifests.py <- verify_manifest(): manifest + re-hash of the clip on disk
 │   │   ├── services/system_settings.py <- get_system_settings(session)
-│   │   ├── core/storage.py      <- RECORDINGS_DIR (repo-root recordings/)
+│   │   ├── services/clip_files.py <- delete_clips(): deleting -> remove files -> deleted
+│   │   ├── services/login_throttle.py <- login_retry_after(): limits from audit_logs
+│   │   ├── services/users.py    <- revoke_sessions(), another_active_admin_exists() (row lock)
+│   │   ├── core/storage.py      <- RECORDINGS_DIR, is_plain_file_name(), recording_path() (the only
+│   │   │                           way to turn a DB value or URL into a path under recordings/)
 │   │   ├── cli/create_user.py   <- CLI to create accounts
 │   │   ├── core/config.py       <- pydantic-settings, env_file=".env" (relative to CWD!)
 │   │   ├── core/security.py     <- Argon2 password hashing, session token + SHA-256 hash
@@ -86,12 +98,16 @@ sentinel/
 │   │   ├── db/schema.sql        <- design DDL; intent in comments; OUT OF DATE vs migrations
 │   │   └── .env                 <- empty leftover, delete
 │   ├── migrations/versions/     <- 2feed91c7392 (initial), ea5ce070565b (users.email -> username),
-│   │                               b7c1d9e4f2a6 (seed system_settings + no-delete triggers) = head
+│   │                               b7c1d9e4f2a6 (seed system_settings + no-delete triggers),
+│   │                               01f7729daa10 (unique lower(cameras.name)) = head
 │   ├── src/                     <- stray yolo*.pt copies, unused (git-ignored)
 │   └── tests/                   <- conftest (ENVIRONMENT=test; DB fixtures db_connection, db_app,
-│                                   camera_name, db_client), test_health, test_auth, test_security,
-│                                   test_event_create, test_videos, test_events, test_system_settings,
-│                                   test_manifests (DB tests need TEST_DATABASE_URL)
+│                                   camera_name, admin, recordings, db_client = logged in as admin;
+│                                   helpers add_user, act_as, login), test_health, test_auth,
+│                                   test_security, test_event_create, test_videos, test_events,
+│                                   test_system_settings, test_manifests, test_cameras, test_users,
+│                                   test_settings_api, test_login_rate_limit
+│                                   (DB tests need TEST_DATABASE_URL)
 ├── workers/
 │   ├── .env                     <- git-ignored; contains only SENTINEL_API_KEY
 │   ├── .env.example             <- WRONG values, see 5.4
@@ -137,26 +153,41 @@ uv run fastapi dev app/main.py --host 0.0.0.0     # docs at http://127.0.0.1:800
 | Route | Auth | Notes |
 |---|---|---|
 | `GET /health` (no prefix) | none | |
-| `POST /auth/login` | none | body `{username, password}`; sets `sentinel_session` HttpOnly cookie (SameSite=Lax); writes `audit_logs` (success/denied) |
+| `POST /auth/login` | none | body `{username, password}`; sets `sentinel_session` HttpOnly cookie (SameSite=Lax); audited; 429 + `Retry-After` when rate limited (4.3) |
 | `POST /auth/logout` | cookie | revokes the session, 204 |
 | `GET /auth/me` | cookie | `{id, username, display_name, role}` |
+| `POST /auth/password` | cookie | `{current_password, new_password}`; wrong current → 400 (not 401); logs out the user's other sessions; 204 |
 | `POST /events` | `X-API-Key` = `WORKER_API_KEY` | worker only; see 4.4; 404 unknown camera, 409 conflict |
-| `GET /events` | cookie | all events with clips, newest first; **no pagination/filters** |
+| `GET /events` | cookie | `{items, total, limit, offset}`, newest `started_at` first (`id` breaks ties); `limit` 1–200 (50), `offset` ≥ 0, `camera_id` (UUID), `started_from` (incl.) / `started_to` (excl.), aware times, `+` must be `%2B` in a URL; bad values 422 |
 | `GET /events/{id}` | cookie | |
-| `DELETE /events/{id}` | cookie (any role) | deletes clip rows + event; does **not** delete the file |
-| `GET /videos/{filename}` | cookie | bare file name only (no `/`, `\`, NUL), symlink guard, `inline`; serves any file in `recordings/` (not checked against the DB) |
+| `DELETE /events/{id}` | admin | removes video + manifest files; clips `deleting` (committed) → `deleted`; event and clip rows **stay** (frontend shows "recording deleted"); file in use → clip stays `deleting`, 409, retry by deleting again; repeat delete is a no-op 204; audited `event.delete` |
+| `GET /videos/{filename}` | cookie | plain file name (`recording_path`), must be the `filepath` of a `ready` clip with `expires_at` in the future, else 404; one `clip.view` audit row per opening (requests without `Range` or with `bytes=0-`) |
+| `GET /cameras` | cookie | `[{id, name, location, is_enabled, last_frame_at}]`, by name; no stream details |
+| `GET /cameras/{id}` | admin | adds `stream_url`, `credentials_ref`, `detection_config`, health fields, timestamps |
+| `POST /cameras`, `PATCH /cameras/{id}` | admin | schema mirrors the CHECKs (4.7); PATCH = only fields sent, `null` clears `location`/`credentials_ref`; no DELETE (disable instead); name (case-insensitive) or URL taken → 409; audited |
+| `GET /users`, `POST /users`, `PATCH /users/{id}` | admin | no delete (deactivate); role change/deactivation revokes the user's sessions; can't remove own admin access; last active admin protected by a row lock; audited |
+| `POST /users/{id}/password` | admin | reset another user's password, revokes their sessions; own → 409 (use `/auth/password`) |
+| `GET /settings`, `PATCH /settings` | admin | PATCH = only fields sent; idle ≤ absolute checked after merging → 422; audited with `[old, new]` per field |
 
 ### 4.3 Auth design
 
 - Passwords: Argon2 (`argon2-cffi` `PasswordHasher`), rehash on login when parameters change;
-  unknown usernames still run a dummy verify. No rate limiting.
+  unknown usernames still run a dummy verify. Passwords 12–1024 chars (`core/security.py`
+  constants, used by the schemas and the CLI); the login caps input at 1024.
+- Rate limiting (`services/login_throttle.py`): counts `session.login`/`denied` rows in
+  `audit_logs` (their `details` hold `username` and `ip`) over 15 min; ≥ 5 per username (known
+  or not, so no username leak) or ≥ 20 per IP → 429 with `Retry-After`, checked **before** the
+  password. Refused attempts are audited as `session.login_throttled` and not counted.
+  `client_ip()` uses the socket address: behind a reverse proxy every client has the proxy's IP
+  (the per-IP limit then needs the proxy's forwarded header, see item 27).
 - Sessions: opaque `secrets.token_urlsafe(32)` in the cookie; only its SHA-256 digest is stored
   (`user_sessions.token_hash`, 32 bytes). Absolute lifetime 12 h, idle timeout 30 min
   (`system_settings.session_absolute_seconds` applied at login, `session_idle_seconds` checked
   on every request, so changing it affects open sessions).
   `last_seen_at` is written at most once per 60 s.
-- `get_current_user` rejects revoked/expired/idle sessions and inactive users. Roles exist
-  (`admin`, `user`) but **no endpoint checks the role yet**.
+- `get_current_user` rejects revoked/expired/idle sessions and inactive users.
+  `require_admin` / `AdminDep` (in `deps.py`) adds 403 for non-admins. Users are created by
+  admins (`POST /users`); the CLI remains for the first admin.
 - Worker: shared secret, `secrets.compare_digest` on `X-API-Key`.
 - Usernames: `^[a-z0-9._-]{3,50}$` (DB CHECK), lower-cased on login.
 - Create accounts (password ≥ 12 chars, prompted twice, input hidden):
@@ -219,13 +250,13 @@ Keep values unquoted. Update `.env.example` (with empty secrets) whenever a vari
 - `postgresql+psycopg`, `pool_pre_ping=True`. `migrations/env.py` uses `app.db.session.engine`.
 - Docker: service `sentinel-db`, `postgres:18`, container `backend-sentinel-db-1`, port 5432,
   volume `postgres_data`. `docker compose down -v` **deletes the database**.
-- Head: `b7c1d9e4f2a6`. Errors such as `column users.username does not exist` or
+- Head: `01f7729daa10` (unique index `uq_cameras_name_lower` on `lower(name)`). Errors such as `column users.username does not exist` or
   `system_settings row is missing` mean a migration was not applied: `uv run alembic upgrade head`.
 - Tables: `cameras`, `events`, `video_clips`, `media_jobs` (unused), `system_settings`,
   `users`, `user_sessions`, `camera_access` (unused), `audit_logs`, `alembic_version`.
 - `system_settings`: exactly one row (`id = 1`), seeded by `b7c1d9e4f2a6` with the column
   defaults (retention 7 d, pre/post roll 10 s, parts 60 s, confidence 0.60, session 43200 s,
-  idle 1800 s). Triggers reject `DELETE`/`TRUNCATE`; change it with `UPDATE`. Read through
+  idle 1800 s). Triggers reject `DELETE`/`TRUNCATE`; change it with `PATCH /settings`. Read through
   `app/services/system_settings.get_system_settings(session)`. Used: `retention_days`,
   `session_absolute_seconds`, `session_idle_seconds`. Not used yet: pre/post roll, clip parts,
   confidence (the worker reads its own `.env`; see item 14 in section 8).
@@ -235,6 +266,8 @@ Keep values unquoted. Update `.env.example` (with empty secrets) whenever a vari
 Violations raise `CheckViolation`/`NotNullViolation`/`IntegrityError` at flush: `POST /events`
 turns them into 409, other routes into 500.
 
+- `cameras.name`: unique ignoring case (index on `lower(name)`); the worker looks cameras up
+  by exact name.
 - `cameras.stream_url`: NOT NULL, UNIQUE, must match `^rtsp://...`. `detection_config`: exactly
   `schema_version` (=1) and `region` (null or polygon, `match_rule="bottom_center"`, 3–16 points).
 - `events`: `last_person_seen_at >= started_at`, `closed_at >= last_person_seen_at`;
@@ -375,8 +408,10 @@ Out of scope for the user; record only what the backend must satisfy. Login page
 
 It calls only routes that exist in `app/main.py`:
 `POST /auth/login`, `GET /auth/me`, `POST /auth/logout`, `GET /events`, `GET /events/{id}`,
-`DELETE /events/{id}`, `GET /videos/{filename}`. `src/lib/backend.ts` parses **both** event
-shapes: the old flat server.py one (`video_path`, `clip_status`) and the current one
+`DELETE /events/{id}`, `GET /videos/{filename}`. `GET /events` now returns an envelope; on
+`fix/frontend-events-page` `getEvents` reads its `items` (a bare list is a 502 there), but still
+fetches only the first page (50) and ignores `camera_name`: paging/filter UI is the colleague's.
+`src/lib/backend.ts` parses **both** event shapes: the old flat server.py one (`video_path`, `clip_status`) and the current one
 (`clips[]` with `filepath`, `status`, `expires_at`). The earlier mismatches
 (`/session`, `/dashboard`, `/cameras`, `/events/{id}/review`, email/roles) were dropped on the
 frontend side; camera endpoints and roles will be needed again later.
@@ -425,6 +460,27 @@ On 2026-10-28, `feat/clip-manifests`:
   `interrupted/stream_lost`), all manifests `synced: true`, exit 0; second run: nothing to sync.
   Those 3 events were kept in the dev DB.
 
+On 2026-10-29, `feat/events-pagination`:
+
+- `uv run pytest` with the DB: 75 passed, 1 skipped; without: 49 passed, 27 skipped. Ruff clean.
+  New in `test_events.py`: pages newest first by `started_at` (posted out of order), `total`,
+  camera filter (incl. unknown camera → empty page), date range incl./excl. and another timezone,
+  7 bad-parameter cases → 422, anonymous → 401; `camera_name` in POST/detail/list.
+- Frontend worktree: `npm test` 14 passed (new: bare list rejected). `tsc` not run (no
+  `node_modules` in the worktree).
+
+On 2026-10-29, `feat/admin-api`:
+
+- Migration `01f7729daa10`: upgrade, downgrade, upgrade again; `alembic check` clean. No
+  duplicate camera names existed.
+- `uv run pytest` with the DB: 159 passed, 1 skipped; without: 48 passed, 112 skipped. Ruff
+  clean. New: `test_cameras.py`, `test_users.py` (real cookie logins for session revocation and
+  own password change), `test_settings_api.py`, `test_login_rate_limit.py`; `test_videos.py`
+  rewritten (clips now need DB rows); delete tests in `test_events.py` (files removed, rows
+  kept, idempotent, file-in-use → `deleting` + 409, non-admin 403). After the run the dev DB
+  held no test users/cameras/audit rows and retention was still 7.
+- Not tried live in a browser yet (no admin password available to the agent).
+
 ---
 
 ## 8. What is left (prioritised; frontend UI excluded)
@@ -435,22 +491,21 @@ On 2026-10-28, `feat/clip-manifests`:
 3. Keep this file in sync after each step.
 
 **🟠 APIs the frontend needs**
-4. `GET /events`: `limit`/`offset` + `total`, filters by camera and date range, camera name,
-   newest first.
-5. Cameras: `GET /cameras` for everyone; create/edit/disable for admins.
-6. `require_admin` dependency; use it.
-7. `DELETE /events/{id}`: admin-only, delete the file too (`deleting` → `deleted`); consider
-   keeping the event row as metadata.
-8. Admin user management (list/create/role/deactivate/reset password) + change own password,
-   all audited; replaces `create_user`.
-9. Video endpoint: serve only files of a `ready`, unexpired clip in the DB; audit who watched what.
-10. Login rate limiting (the frontend already handles 429).
+4. ~~`GET /events` pagination, filters, camera name~~ — done on `feat/events-pagination`.
+   Possible later: filters on status/end reason, keyset pagination if OFFSET gets slow.
+5. ~~Cameras~~ — done on `feat/admin-api`.
+6. ~~`require_admin`~~ — done.
+7. ~~Admin-only delete that removes the files~~ — done; rows kept, shown as "recording deleted".
+   The frontend removes a deleted event from its list until the next reload; tell the colleague.
+8. ~~User management + own password change~~ — done; `create_user` stays for the first admin.
+9. ~~Video endpoint checked against the DB, audited~~ — done. Pending clips are no longer
+   playable (only `ready`).
+10. ~~Login rate limiting~~ — done (5 per username / 20 per IP / 15 min).
 11. Ask the colleague: "mark event as reviewed"?
 
 **🟡 Data still fake**
 12. ~~Migration seeding `system_settings`; read retention and session timeouts from it~~ — done
-    on `feat/system-settings-seed` (4.6). No API to change the settings yet (admin endpoint,
-    audited, later).
+    on `feat/system-settings-seed` (4.6). Admin API `PATCH /settings` done on `feat/admin-api`.
 13. ~~`source_manifest_ref`~~ — real manifests on `feat/clip-manifests` (5.6, 4.4).
 14. Unique clip names (camera name + milliseconds or UUID). Postponed by the user.
 

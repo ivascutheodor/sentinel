@@ -1,10 +1,18 @@
 import hashlib
+import re
 import secrets
 
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerificationError
 
 _hasher = PasswordHasher()
+
+# Shared by the API schemas and the `create_user` CLI. The maximum stops a huge "password"
+# from making Argon2 burn CPU on every attempt.
+MIN_PASSWORD_LENGTH = 12
+MAX_PASSWORD_LENGTH = 1024
+# Same rule as the `users.username` CHECK.
+USERNAME_PATTERN = re.compile(r"^[a-z0-9._-]{3,50}$")
 
 # Checked against when the username is unknown, so a failed login takes the same
 # time whether or not the account exists.

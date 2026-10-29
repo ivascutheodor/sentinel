@@ -9,6 +9,7 @@ from sqlalchemy import (
     CheckConstraint,
     DateTime,
     FetchedValue,
+    Index,
     Text,
     Uuid,
     text,
@@ -56,6 +57,8 @@ class Camera(Base):
             "credentials_ref IS NULL OR credentials_ref ~ '^[a-z][a-z0-9_]{0,63}$'",
             name="credentials_ref",
         ),
+        # The worker finds its camera by name, so "Entrance" and "entrance" must not both exist.
+        Index("uq_cameras_name_lower", text("lower(name)"), unique=True),
         {
             "comment": (
                 "Single-clinic camera identity survives changes of name, address and credentials. "

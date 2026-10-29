@@ -3,6 +3,7 @@ from typing import Annotated, Literal, Self
 from uuid import UUID
 
 from pydantic import (
+    AfterValidator,
     AwareDatetime,
     BaseModel,
     ConfigDict,
@@ -12,10 +13,21 @@ from pydantic import (
     model_validator,
 )
 
+from app.core.storage import is_plain_file_name
 from app.db.enums import CaptureState, EventType, VideoStatus
 from app.schemas.manifests import ManifestRef
 
 NonBlank = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+
+
+def _plain_file_name(value: str) -> str:
+    if not is_plain_file_name(value):
+        raise ValueError("Must be a plain file name inside recordings/, without folders.")
+    return value
+
+
+# The API later serves and deletes this file, so it must not point outside recordings/.
+FileName = Annotated[NonBlank, AfterValidator(_plain_file_name)]
 EndReason = Literal[
     "person_absent",
     "stream_lost",
@@ -49,7 +61,7 @@ class EventCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     camera_id: NonBlank  # the camera's name, e.g. "test_camera_01"
-    video_path: NonBlank  # file name inside recordings/
+    video_path: FileName  # file name inside recordings/
 
     # Optional so a worker that only sends the two fields above still works; the
     # backend then falls back to "now" and leaves the clip `pending`.

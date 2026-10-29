@@ -4,14 +4,16 @@ from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import AwareDatetime
-from sqlalchemy import delete, func, select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 
-from app.api.deps import SessionDep, get_current_user, verify_worker_key
-from app.db.enums import CaptureState, EventType, VideoStatus
+from app.api.deps import AdminDep, SessionDep, get_current_user, verify_worker_key
+from app.db.enums import AuditOutcome, CaptureState, EventType, VideoStatus
 from app.db.models import Camera, Event, VideoClip
 from app.schemas.events import EventCreate, EventPage, EventResponse
+from app.services.audit import audit
+from app.services.clip_files import delete_clips
 from app.services.manifests import ManifestError, verify_manifest
 from app.services.system_settings import get_system_settings
 
@@ -164,15 +166,39 @@ def get_event(event_id: UUID, session: SessionDep) -> Event:
 @router.delete(
     "/{event_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(get_current_user)],
+    summary="Delete an event's recordings (admin only)",
 )
-def delete_event(event_id: UUID, session: SessionDep) -> None:
-    event = session.get(Event, event_id)
+def delete_event(event_id: UUID, session: SessionDep, admin: AdminDep) -> None:
+    """Removes the video and manifest files; the event and clip rows stay as the record.
+
+    The event stays in `GET /events` with its clips `deleted` ("recording deleted"), so the
+    history of who was where, and who deleted the footage, is kept. Deleting again is safe:
+    clips already `deleted` are skipped, and clips left `deleting` are retried.
+    """
+    event = session.scalar(
+        select(Event).where(Event.id == event_id).options(selectinload(Event.clips))
+    )
     if event is None:
         raise HTTPException(status_code=404, detail="Event not found.")
 
-    # `video_clips.event_id` uses ON DELETE NO ACTION, so remove clips first.
-    # The video file itself stays on disk (see CLAUDE.md, "What is left").
-    session.execute(delete(VideoClip).where(VideoClip.event_id == event_id))
-    session.delete(event)
+    clips = [clip for clip in event.clips if clip.status != VideoStatus.DELETED]
+    if not clips:
+        return
+    failed = delete_clips(session, clips)
+    audit(
+        session,
+        "event.delete",
+        AuditOutcome.SUCCESS if failed == 0 else AuditOutcome.FAILURE,
+        user=admin,
+        resource=("event", str(event_id)),
+        details={"clips": len(clips), "failed": failed},
+    )
     session.commit()
+    if failed:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "The recording could not be removed, probably because it is in use. "
+                "It is marked for deletion; try again."
+            ),
+        )

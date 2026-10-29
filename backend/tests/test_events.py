@@ -1,15 +1,20 @@
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from typing import Any
 from uuid import UUID, uuid4
 
 import pytest
+from conftest import act_as, add_user
 from fastapi.testclient import TestClient
 from sqlalchemy import Connection, func, insert, select, update
 
 from app.api.deps import get_current_user
+from app.core import storage
 from app.core.config import get_settings
-from app.db.models import Camera, Event, SystemSettings, VideoClip
+from app.db.enums import UserRole
+from app.db.models import AuditLog, Camera, Event, SystemSettings, User, VideoClip
 from app.main import app
+from app.services import clip_files
 
 EVENTS_URL = f"{get_settings().api_prefix}/events"
 WORKER_HEADERS = {"X-API-Key": get_settings().worker_api_key.get_secret_value()}
@@ -37,7 +42,7 @@ def event_payload(camera_name: str) -> dict[str, Any]:
     }
 
 
-def test_create_read_and_delete_event(
+def test_create_and_read_event(
     db_client: TestClient, db_connection: Connection, event_payload: dict[str, Any]
 ) -> None:
     response = db_client.post(EVENTS_URL, json=event_payload, headers=WORKER_HEADERS)
@@ -73,12 +78,96 @@ def test_create_read_and_delete_event(
     assert response.status_code == 200
     assert response.json() == {"items": [created], "total": 1, "limit": 50, "offset": 0}
 
-    response = db_client.delete(f"{EVENTS_URL}/{event_id}")
-    assert response.status_code == 204
-    assert response.content == b""
-    assert db_connection.scalar(select(Event.id).where(Event.id == event_id)) is None
-    assert db_connection.scalar(select(func.count()).where(VideoClip.event_id == event_id)) == 0
-    assert db_client.get(f"{EVENTS_URL}/{event_id}").status_code == 404
+
+def test_delete_removes_files_and_keeps_the_record(
+    db_client: TestClient,
+    db_connection: Connection,
+    event_payload: dict[str, Any],
+    recordings: Path,
+    admin: User,
+) -> None:
+    video = recordings / event_payload["video_path"]
+    video.write_bytes(b"footage")
+    event = db_client.post(EVENTS_URL, json=event_payload, headers=WORKER_HEADERS).json()
+    # A manifest, as the worker would have left it (the event above was posted without one).
+    manifest = recordings / "manifests" / "delete_test.json"
+    manifest.parent.mkdir()
+    manifest.write_text("{}")
+    db_connection.execute(
+        update(VideoClip)
+        .where(VideoClip.event_id == UUID(event["id"]))
+        .values(source_manifest_ref="manifests/delete_test.json")
+    )
+
+    response = db_client.delete(f"{EVENTS_URL}/{event['id']}")
+    assert response.status_code == 204, response.text
+    assert not video.exists()
+    assert not manifest.exists()
+
+    # Still listed: "recording deleted", not gone.
+    after = db_client.get(f"{EVENTS_URL}/{event['id']}").json()
+    [clip] = after["clips"]
+    assert clip["status"] == "deleted"
+    assert clip["delete_requested_at"] is not None
+    assert clip["deleted_at"] is not None
+    assert audit_rows(db_connection, "event.delete", event["id"]) == [(admin.id, "success")]
+
+    # Deleting again changes nothing and writes no second audit row.
+    assert db_client.delete(f"{EVENTS_URL}/{event['id']}").status_code == 204
+    assert len(audit_rows(db_connection, "event.delete", event["id"])) == 1
+
+
+def test_delete_without_files_on_disk(
+    db_client: TestClient, event_payload: dict[str, Any], recordings: Path
+) -> None:
+    # A clip whose file is already gone (or never existed) can still be marked deleted.
+    event = db_client.post(EVENTS_URL, json=event_payload, headers=WORKER_HEADERS).json()
+    assert db_client.delete(f"{EVENTS_URL}/{event['id']}").status_code == 204
+    assert db_client.get(f"{EVENTS_URL}/{event['id']}").json()["clips"][0]["status"] == "deleted"
+
+
+def test_delete_that_cannot_remove_the_file_stays_deleting(
+    db_client: TestClient,
+    db_connection: Connection,
+    event_payload: dict[str, Any],
+    recordings: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    event = db_client.post(EVENTS_URL, json=event_payload, headers=WORKER_HEADERS).json()
+
+    def file_in_use(clip: VideoClip) -> None:
+        raise PermissionError("The process cannot access the file")  # what Windows says
+
+    monkeypatch.setattr(clip_files, "remove_clip_files", file_in_use)
+    response = db_client.delete(f"{EVENTS_URL}/{event['id']}")
+    assert response.status_code == 409
+    assert db_client.get(f"{EVENTS_URL}/{event['id']}").json()["clips"][0]["status"] == "deleting"
+    assert audit_rows(db_connection, "event.delete", event["id"])[0][1] == "failure"
+
+    # Once the file is free, deleting again finishes the job.
+    monkeypatch.undo()
+    monkeypatch.setattr(storage, "RECORDINGS_DIR", recordings)
+    assert db_client.delete(f"{EVENTS_URL}/{event['id']}").status_code == 204
+    assert db_client.get(f"{EVENTS_URL}/{event['id']}").json()["clips"][0]["status"] == "deleted"
+
+
+def test_only_admins_delete(
+    db_client: TestClient, db_connection: Connection, event_payload: dict[str, Any]
+) -> None:
+    event = db_client.post(EVENTS_URL, json=event_payload, headers=WORKER_HEADERS).json()
+    act_as(add_user(db_connection))
+    response = db_client.delete(f"{EVENTS_URL}/{event['id']}")
+    assert response.status_code == 403
+    assert db_client.get(f"{EVENTS_URL}/{event['id']}").json()["clips"][0]["status"] == "ready"
+
+
+def audit_rows(connection: Connection, action: str, resource_id: str) -> list[tuple]:
+    rows = connection.execute(
+        select(AuditLog.actor_user_id, AuditLog.outcome)
+        .where(AuditLog.action == action, AuditLog.resource_id == resource_id)
+        .order_by(AuditLog.occurred_at)
+    ).all()
+    return [(actor, str(outcome)) for actor, outcome in rows]
 
 
 def test_clip_expiry_uses_system_settings(
@@ -266,6 +355,8 @@ def test_unknown_event(db_client: TestClient, method: str) -> None:
     [
         {"camera_id": " "},
         {"video_path": ""},
+        {"video_path": "../outside.mp4"},  # must stay inside recordings/
+        {"video_path": "sub\\clip.mp4"},
         {"clips": []},  # the old client-built shape is rejected, not ignored
         {"started_at": "2026-10-08T10:00:00"},
         {"closed_at": "2026-10-08T10:00:10Z"},
@@ -293,7 +384,8 @@ def test_invalid_event_payload(event_payload: dict[str, Any], changes: dict[str,
 
 @pytest.mark.parametrize("method", ["get", "delete"])
 def test_invalid_event_id(method: str) -> None:
-    app.dependency_overrides[get_current_user] = lambda: None
+    # Path parameters are validated before the user is needed, so a stand-in admin is enough.
+    app.dependency_overrides[get_current_user] = lambda: User(role=UserRole.ADMIN)
     try:
         with TestClient(app) as client:
             response = client.request(method, f"{EVENTS_URL}/not-a-uuid")
