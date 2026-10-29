@@ -6,7 +6,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select
 
 from app.api.auth import router as auth_router
+from app.api.cameras import router as cameras_router
 from app.api.events import router as events_router
+from app.api.settings import router as settings_router
+from app.api.users import router as users_router
 from app.api.videos import router as videos_router
 from app.core.config import get_settings
 from app.core.version import get_version
@@ -53,6 +56,9 @@ app.add_middleware(
 app.include_router(auth_router, prefix=settings.api_prefix)
 app.include_router(events_router, prefix=settings.api_prefix)
 app.include_router(videos_router, prefix=settings.api_prefix)
+app.include_router(cameras_router, prefix=settings.api_prefix)
+app.include_router(users_router, prefix=settings.api_prefix)
+app.include_router(settings_router, prefix=settings.api_prefix)
 
 
 @app.get("/health")

@@ -76,7 +76,8 @@ indexes represented by the SQLAlchemy models.
 The `system_settings` table holds exactly one row (`id = 1`), the installation-wide
 settings. A migration inserts it with the column defaults (retention 7 days, sessions
 12 hours with a 30-minute idle timeout, ...), and triggers reject `DELETE` and
-`TRUNCATE` on it: change values with `UPDATE` instead. The API reads it for:
+`TRUNCATE` on it. Admins change it with `PATCH /api/v1/settings` (audited, with old and
+new values). The API reads it for:
 
 - `retention_days`: the `expires_at` of each new clip. Changing it does not
   rewrite clips that already exist.
@@ -132,21 +133,72 @@ All routes are under `API_PREFIX` (default `/api/v1`):
 
 | Route | Who | Purpose |
 |---|---|---|
-| `POST /auth/login` | anyone | `{username, password}`; sets the session cookie |
+| `POST /auth/login` | anyone | `{username, password}`; sets the session cookie; rate limited |
 | `POST /auth/logout` | logged in | revokes the session |
 | `GET /auth/me` | logged in | the current user |
+| `POST /auth/password` | logged in | change your own password (`current_password`, `new_password`) |
 | `POST /events` | worker (`X-API-Key`) | save a finished incident clip |
 | `GET /events` | logged in | one page of events with their clips, newest first (see below) |
 | `GET /events/{event_id}` | logged in | one event |
-| `DELETE /events/{event_id}` | logged in | delete an event and its clip rows (not the file) |
-| `GET /videos/{filename}` | logged in | stream a file from `recordings/` |
+| `DELETE /events/{event_id}` | admin | delete the event's recordings (files), keep the record |
+| `GET /videos/{filename}` | logged in | stream a `ready`, unexpired clip; audited |
+| `GET /cameras` | logged in | cameras, without stream details |
+| `GET /cameras/{id}` | admin | one camera with stream URL and zone |
+| `POST /cameras`, `PATCH /cameras/{id}` | admin | create, edit, enable/disable a camera |
+| `GET /users`, `POST /users`, `PATCH /users/{id}` | admin | list, create, change role/name/active |
+| `POST /users/{id}/password` | admin | reset someone else's password |
+| `GET /settings`, `PATCH /settings` | admin | read and change `system_settings` |
 
-Login attempts and logouts are written to `audit_logs`.
+`401` means not logged in, `403` logged in without the admin role. Accounts get the admin
+role from an admin, or from `create_user --admin` (the way to create the first one).
+
+Everything that changes data or shows footage is written to `audit_logs`: logins (failed,
+refused and successful), logouts, password changes, user, camera and settings changes,
+deletions, and each time a clip is opened.
+
+### Cameras
+
+`PATCH` changes only the fields sent; `null` clears `location` or `credentials_ref`.
+Cameras are disabled (`is_enabled: false`), never deleted: events point to them. Names are
+unique ignoring case (the worker finds its camera by name); a taken name or stream URL is
+a `409`. The zone is `detection_config.region`: a polygon of 3 to 16 `[x, y]` pixel points,
+or `null` for none. Stream URLs must be `rtsp://host[:port]/path` without a user or password
+(`credentials_ref` names where the credentials are kept instead).
+
+### Users
+
+Accounts are deactivated, never deleted. Passwords are 12 to 1024 characters. A role change,
+a deactivation or an admin password reset logs that user out everywhere; changing your own
+password logs out your other sessions and keeps the current one. An admin cannot remove
+their own admin role or deactivate themselves, and the last active admin cannot be
+removed, so the clinic always keeps one.
+
+### Login rate limiting
+
+Failed logins are counted from `audit_logs` over the last 15 minutes. After 5 failures
+for one username (whether or not it exists) or 20 from one IP address, the login answers
+`429` with a `Retry-After` header (seconds), even for the right password. Refused attempts
+are audited as `session.login_throttled` and don't extend the block. Someone guessing a
+username can lock that person out for 15 minutes; the per-IP limit keeps that contained.
+
+### Deleting recordings
+
+`DELETE /events/{id}` (admin) removes each clip's video and manifest from `recordings/`.
+Each clip goes `deleting` (committed first), then `deleted` once its files are gone. The
+event and clip rows stay, so the event is still listed, as "recording deleted". If a file
+can't be removed (on Windows, for example, while it is being streamed), the clip stays
+`deleting` and the answer is `409`; deleting again retries.
+
+### Watching clips
+
+`GET /videos/{filename}` serves only files that belong to a clip that is `ready` and not
+past `expires_at`; anything else is `404`. Opening a clip writes one `clip.view` audit row;
+the browser's follow-up `Range` requests don't add more.
 
 ## Events and Video Clips
 
 The worker posts one event when a clip is finished. Only `camera_id` (the camera's
-**name**) and `video_path` (the file name inside `recordings/`) are required:
+**name**) and `video_path` (a plain file name inside `recordings/`, no folders) are required:
 
 ```json
 {

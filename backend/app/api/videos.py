@@ -1,26 +1,60 @@
-from pathlib import Path
+from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse
+from sqlalchemy import select
 
-from app.api.deps import get_current_user
-from app.core.storage import RECORDINGS_DIR
+from app.api.deps import CurrentUserDep, SessionDep
+from app.core.storage import recording_path
+from app.db.enums import AuditOutcome, VideoStatus
+from app.db.models import VideoClip
+from app.services.audit import audit
 
-router = APIRouter(prefix="/videos", tags=["Videos"], dependencies=[Depends(get_current_user)])
+router = APIRouter(prefix="/videos", tags=["Videos"])
+
+
+def starts_playback(range_header: str | None) -> bool:
+    """True for the request that opens a video, false for the follow-up chunks.
+
+    A browser fetches a video in many `Range` requests (`bytes=0-`, then later parts, and
+    more on every seek). Auditing only the first keeps it to about one row per viewing.
+    """
+    if range_header is None:
+        return True
+    return range_header.replace(" ", "").lower().startswith("bytes=0-")
 
 
 @router.get("/{filename}")
-def get_video(filename: str) -> FileResponse:
-    # Only a bare file name: no folders, no NUL byte (Windows paths accept some of these
-    # without raising, so check explicitly instead of relying on resolve()).
-    if "\x00" in filename or Path(filename).name != filename:
-        raise HTTPException(status_code=400, detail="Invalid video file name.")
-    video_path = (RECORDINGS_DIR / filename).resolve()
-    # Catches symlinks inside recordings/ that point elsewhere.
-    if not video_path.is_relative_to(RECORDINGS_DIR.resolve()):
-        raise HTTPException(status_code=400, detail="Invalid path to video.")
-    if not video_path.is_file():
-        raise HTTPException(status_code=404, detail="Clip not found on disk.")
+def get_video(
+    filename: str, request: Request, user: CurrentUserDep, session: SessionDep
+) -> FileResponse:
+    try:
+        video_path = recording_path(filename)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid video file name.") from exc
+
+    # Only files the database knows as a viewable clip; expired, deleted, pending, or
+    # files nobody registered are all "not found" (no hint that they exist).
+    clip = session.scalar(select(VideoClip).where(VideoClip.filepath == filename))
+    if (
+        clip is None
+        or clip.status != VideoStatus.READY
+        or clip.expires_at <= datetime.now(UTC)
+        or not video_path.is_file()
+    ):
+        raise HTTPException(status_code=404, detail="Clip not found.")
+
+    if starts_playback(request.headers.get("range")):
+        audit(
+            session,
+            "clip.view",
+            AuditOutcome.SUCCESS,
+            user=user,
+            resource=("video_clip", str(clip.id)),
+            details={"event_id": str(clip.event_id), "file": filename},
+        )
+        session.commit()
+
     return FileResponse(
         path=video_path,
         media_type="video/mp4",

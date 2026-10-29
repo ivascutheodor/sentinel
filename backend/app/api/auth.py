@@ -1,6 +1,6 @@
 from datetime import UTC, datetime, timedelta
 
-from fastapi import APIRouter, Request, Response, status
+from fastapi import APIRouter, HTTPException, Request, Response, status
 from sqlalchemy import select
 
 from app.api.deps import (
@@ -22,8 +22,16 @@ from app.core.security import (
 from app.db.enums import AuditOutcome
 from app.db.models import User, UserSession
 from app.schemas.auth import LoginRequest, UserResponse
+from app.schemas.users import PasswordChange
 from app.services.audit import audit
+from app.services.login_throttle import (
+    FAILED_LOGIN,
+    THROTTLED_LOGIN,
+    login_details,
+    login_retry_after,
+)
 from app.services.system_settings import get_system_settings
+from app.services.users import revoke_sessions
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -34,6 +42,21 @@ def login(
 ) -> User:
     settings = get_settings()
     username = credentials.username.strip().lower()
+    ip = client_ip(request)
+    now = datetime.now(UTC)
+
+    # Checked before the password, so even the right password is refused while blocked:
+    # otherwise a guesser could keep going and learn when a guess is right.
+    retry_after = login_retry_after(session, username, ip, now)
+    if retry_after is not None:
+        audit(session, THROTTLED_LOGIN, AuditOutcome.DENIED, details=login_details(username, ip))
+        session.commit()
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many failed login attempts. Try again later.",
+            headers={"Retry-After": str(retry_after)},
+        )
+
     user = session.scalar(select(User).where(User.username == username))
 
     if user is None:
@@ -45,9 +68,10 @@ def login(
     if user is None or not valid:
         audit(
             session,
-            "session.login",
+            FAILED_LOGIN,
             AuditOutcome.DENIED,
             resource=("user", str(user.id)) if user is not None else None,
+            details=login_details(username, ip),
         )
         session.commit()
         raise unauthorized("Invalid username or password.")
@@ -56,7 +80,6 @@ def login(
         user.password_hash = hash_password(credentials.password)
 
     lifetime_seconds = get_system_settings(session).session_absolute_seconds
-    now = datetime.now(UTC)
     token = new_session_token()
     session.add(
         UserSession(
@@ -102,3 +125,28 @@ def logout(user_session: CurrentSessionDep, response: Response, session: Session
 @router.get("/me", response_model=UserResponse)
 def me(user: CurrentUserDep) -> User:
     return user
+
+
+@router.post("/password", status_code=status.HTTP_204_NO_CONTENT)
+def change_password(
+    body: PasswordChange, user_session: CurrentSessionDep, session: SessionDep
+) -> None:
+    """Change your own password. Your other sessions are logged out; this one stays."""
+    user = user_session.user
+    if not verify_password(user.password_hash, body.current_password):
+        audit(session, "user.password_change", AuditOutcome.DENIED, user=user)
+        session.commit()
+        # 400, not 401: the session is fine, and a 401 would make the frontend log out.
+        raise HTTPException(status_code=400, detail="Current password is incorrect.")
+
+    user.password_hash = hash_password(body.new_password)
+    user.updated_at = datetime.now(UTC)
+    revoked = revoke_sessions(session, user.id, by=user, keep_session_id=user_session.id)
+    audit(
+        session,
+        "user.password_change",
+        AuditOutcome.SUCCESS,
+        user=user,
+        details={"sessions_revoked": revoked},
+    )
+    session.commit()

@@ -6,19 +6,18 @@ Run from backend/:
 
 import argparse
 import getpass
-import re
 
 from sqlalchemy import select
 
-from app.core.security import hash_password
+from app.core.security import (
+    MAX_PASSWORD_LENGTH,
+    MIN_PASSWORD_LENGTH,
+    USERNAME_PATTERN,
+    hash_password,
+)
 from app.db.enums import UserRole
 from app.db.models import User
 from app.db.session import SessionFactory
-
-MIN_PASSWORD_LENGTH = 12
-
-# Same rule as the `users.username` CHECK; checked here first for a readable error.
-USERNAME_PATTERN = re.compile(r"[a-z0-9._-]{3,50}")
 
 
 def main() -> None:
@@ -33,8 +32,10 @@ def main() -> None:
         raise SystemExit("Username must be 3-50 characters: letters, digits, '.', '_' or '-'.")
 
     password = getpass.getpass("Password: ")
-    if len(password) < MIN_PASSWORD_LENGTH:
-        raise SystemExit(f"Password must be at least {MIN_PASSWORD_LENGTH} characters.")
+    if not MIN_PASSWORD_LENGTH <= len(password) <= MAX_PASSWORD_LENGTH:
+        raise SystemExit(
+            f"Password must be {MIN_PASSWORD_LENGTH} to {MAX_PASSWORD_LENGTH} characters."
+        )
     if getpass.getpass("Repeat password: ") != password:
         raise SystemExit("Passwords do not match.")
 
