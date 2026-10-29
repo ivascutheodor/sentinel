@@ -1,24 +1,18 @@
-from collections.abc import Iterator
 from datetime import datetime, timedelta
 from typing import Any
 from uuid import UUID, uuid4
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import Connection, func, insert, select, update
+from sqlalchemy import Connection, func, select, update
 
 from app.api.deps import get_current_user
 from app.core.config import get_settings
-from app.db.models import Camera, Event, SystemSettings, VideoClip
+from app.db.models import Event, SystemSettings, VideoClip
 from app.main import app
 
 EVENTS_URL = f"{get_settings().api_prefix}/events"
 WORKER_HEADERS = {"X-API-Key": get_settings().worker_api_key.get_secret_value()}
-
-
-@pytest.fixture
-def camera_name() -> str:
-    return f"test-camera-{uuid4().hex}"
 
 
 @pytest.fixture
@@ -41,20 +35,6 @@ def event_payload(camera_name: str) -> dict[str, Any]:
             "settings": {"pre_roll_seconds": 5, "post_roll_seconds": 5},
         },
     }
-
-
-@pytest.fixture
-def db_client(db_app: None, db_connection: Connection, camera_name: str) -> Iterator[TestClient]:
-    """A logged-in client whose requests run inside the rolled-back test transaction."""
-    db_connection.execute(
-        insert(Camera).values(name=camera_name, stream_url=f"rtsp://{camera_name}/stream")
-    )
-    app.dependency_overrides[get_current_user] = lambda: None
-    try:
-        with TestClient(app) as client:
-            yield client
-    finally:
-        app.dependency_overrides.pop(get_current_user, None)
 
 
 def test_create_read_and_delete_event(

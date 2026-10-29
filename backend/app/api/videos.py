@@ -4,9 +4,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
 
 from app.api.deps import get_current_user
+from app.core.storage import RECORDINGS_DIR
 
 router = APIRouter(prefix="/videos", tags=["Videos"], dependencies=[Depends(get_current_user)])
-RECORDINGS_DIR = Path(__file__).resolve().parents[3] / "recordings"
 
 
 @router.get("/{filename}")

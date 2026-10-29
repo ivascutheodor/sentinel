@@ -1,14 +1,18 @@
 import os
 from collections.abc import Iterator
+from uuid import uuid4
 
 import pytest
-from sqlalchemy import Connection, create_engine
+from fastapi.testclient import TestClient
+from sqlalchemy import Connection, create_engine, insert
 from sqlalchemy.orm import Session
 
 # Set before `app` is imported: real environment variables win over .env, and "test" skips
 # the development camera seed, so tests that never touch the database don't need one.
 os.environ["ENVIRONMENT"] = "test"
 
+from app.api.deps import get_current_user  # noqa: E402
+from app.db.models import Camera  # noqa: E402
 from app.db.session import get_session  # noqa: E402
 from app.main import app  # noqa: E402
 
@@ -45,3 +49,22 @@ def db_app(db_connection: Connection) -> Iterator[None]:
         yield
     finally:
         app.dependency_overrides.pop(get_session, None)
+
+
+@pytest.fixture
+def camera_name() -> str:
+    return f"test-camera-{uuid4().hex}"
+
+
+@pytest.fixture
+def db_client(db_app: None, db_connection: Connection, camera_name: str) -> Iterator[TestClient]:
+    """A logged-in client with one test camera; everything is rolled back afterwards."""
+    db_connection.execute(
+        insert(Camera).values(name=camera_name, stream_url=f"rtsp://{camera_name}/stream")
+    )
+    app.dependency_overrides[get_current_user] = lambda: None
+    try:
+        with TestClient(app) as client:
+            yield client
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)

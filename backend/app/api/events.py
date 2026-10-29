@@ -10,6 +10,7 @@ from app.api.deps import SessionDep, get_current_user, verify_worker_key
 from app.db.enums import CaptureState, EventType, VideoStatus
 from app.db.models import Camera, Event, VideoClip
 from app.schemas.events import EventCreate, EventResponse
+from app.services.manifests import ManifestError, verify_manifest
 from app.services.system_settings import get_system_settings
 
 router = APIRouter(prefix="/events", tags=["Events"])
@@ -34,6 +35,15 @@ def create_event(event: EventCreate, session: SessionDep) -> Event:
     camera = session.scalar(select(Camera).where(Camera.name == event.camera_id))
     if camera is None:
         raise HTTPException(status_code=404, detail=f"Camera {event.camera_id!r} not found.")
+
+    sha256 = None
+    if event.source_manifest_ref is not None:
+        try:
+            sha256 = verify_manifest(
+                event.source_manifest_ref, event.camera_id, event.video_path, event.size_bytes
+            )
+        except ManifestError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     # Read when the clip is saved; changing retention later does not rewrite existing clips.
     retention = timedelta(days=get_system_settings(session).retention_days)
@@ -60,7 +70,10 @@ def create_event(event: EventCreate, session: SessionDep) -> Event:
         clips=[
             VideoClip(
                 part_number=1,
-                source_manifest_ref=f"manifests/{uuid4()}.json",
+                # Without a manifest the column (NOT NULL, UNIQUE) gets a placeholder that
+                # can't be mistaken for a real manifests/<name>.json key.
+                source_manifest_ref=event.source_manifest_ref or f"placeholder/{uuid4()}",
+                sha256=sha256,
                 filepath=event.video_path,
                 status=VideoStatus.READY if is_ready else VideoStatus.PENDING,
                 size_bytes=event.size_bytes,

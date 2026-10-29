@@ -13,6 +13,7 @@ from pydantic import (
 )
 
 from app.db.enums import CaptureState, EventType, VideoStatus
+from app.schemas.manifests import ManifestRef
 
 NonBlank = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 EndReason = Literal[
@@ -41,7 +42,8 @@ class EventCreate(BaseModel):
     """What the worker posts once a clip is finished.
 
     The backend owns the rest: event status from `end_reason`, clip status from whether the
-    file's size and time span are known, `expires_at` and the manifest reference.
+    file's size and time span are known, and `expires_at`. With `source_manifest_ref` the
+    clip is verified against the worker's manifest and its SHA-256 is stored.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -59,9 +61,15 @@ class EventCreate(BaseModel):
     recorded_end_at: AwareDatetime | None = None
     size_bytes: int | None = Field(default=None, gt=0)
     config_snapshot: ConfigSnapshot | None = None
+    # The worker's sealed manifest for this clip; the backend checks the file against it.
+    source_manifest_ref: ManifestRef | None = None
 
     @model_validator(mode="after")
     def check_times(self) -> Self:
+        if self.source_manifest_ref is not None and (
+            self.size_bytes is None or self.recorded_start_at is None
+        ):
+            raise ValueError("A manifest needs size_bytes and the recorded start/end times.")
         # Each group is all-or-nothing: mixing sent values with a "now" fallback could
         # break the ordering the `events` and `video_clips` CHECKs enforce.
         event_times = [self.started_at, self.last_person_seen_at, self.closed_at]

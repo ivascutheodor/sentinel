@@ -1,7 +1,8 @@
 # Sentinel — Project Context for Claude Code
 
-> Verified state: 2026-10-28, branch `feat/system-settings-seed` (uncommitted) on top of
-> `origin/main` @ `e80169f` (PR #6: one backend app). It seeds `system_settings` (4.6).
+> Verified state: 2026-10-28, branch `feat/clip-manifests` (uncommitted) on top of
+> `origin/main` @ `2dd9ff8` (PR #7: system_settings). It adds clip manifests and the
+> `sync_manifests.py` recovery script (5.6).
 > This file is the single source of truth for an agent joining the repo: what the project is,
 > what works, what is broken, what comes next. Read it before changing code, and update it when
 > any of that changes.
@@ -21,8 +22,9 @@ stores an evidence clip of each presence interval.
 
 ```
 camera/stream --YOLO track--> foot point in polygon? --yes--> IncidentRecorder (pre-roll buffer)
-  -> FfmpegWriter writes H.264 clip -> Incident -> monitor.report_incident()
-  -> POST /api/v1/events (X-API-Key) -> PostgreSQL (events + video_clips)
+  -> FfmpegWriter writes H.264 clip -> Incident -> manifest JSON ("synced": false)
+  -> POST /api/v1/events (X-API-Key) -> backend re-hashes the clip -> PostgreSQL
+  -> manifest "synced": true        (failed? sync_manifests.py re-sends it later)
   -> browser (session cookie) -> GET /api/v1/events, GET /api/v1/videos/{filename}
 ```
 
@@ -35,10 +37,10 @@ push unless asked**) and a colleague (frontend; also committed backend code, see
 
 | Branch | State |
 |---|---|
-| `origin/main` @ `e80169f` | PRs #4 (auth), #5 (real event data), #6 (one backend app + this file) |
-| `feat/system-settings-seed` (local, **uncommitted**) | Seeds `system_settings`, reads retention and session timeouts from it. 47 tests pass + 1 Windows skip (with the DB) |
+| `origin/main` @ `2dd9ff8` | PRs #4 (auth), #5 (real event data), #6 (one backend app + this file), #7 (system_settings seed) |
+| `feat/clip-manifests` (local, **uncommitted**) | Clip manifests, backend verification, recovery script. 64 backend tests + 1 Windows skip (with the DB), 14 worker tests |
 | `origin/feat/frontend` | Colleague's frontend, 9+ commits ahead of `main`, not merged. Also commits `.pnpm-store/` (should be git-ignored) |
-| local `refactor/single-backend-app`, `feat/real-event-data`, `fix/worker-api-contract`; remote `refactor/single-backend-app` | Fully merged; safe to delete (`git branch -d`, `git push origin --delete`) |
+| local `refactor/single-backend-app`, `feat/real-event-data`, `fix/worker-api-contract`; remote `refactor/single-backend-app`, `feat/system-settings-seed` | Fully merged; safe to delete (`git branch -d`, `git push origin --delete`) |
 
 Check whether a branch is merged without merging it: `git fetch --prune`, then
 `git log --oneline origin/main..<branch>` (empty = nothing to lose) or
@@ -55,8 +57,9 @@ Untracked: `CLAUDE.md` (this file, not committed yet). Commit style: Conventiona
 sentinel/
 ├── CLAUDE.md
 ├── README.md                    <- one line
-├── recordings/                  <- clip storage: the worker writes here, the backend serves from here
-│                                   (test1.mp4 = H.264 test input video; *.mp4 is git-ignored)
+├── recordings/                  <- clip storage: the worker writes here, the backend serves from here;
+│   │                               whole folder git-ignored (test1.mp4 = H.264 test input video)
+│   └── manifests/               <- one <clip name>.json per clip, written by the worker (5.6)
 ├── backend/
 │   ├── .env / .env.example      <- .env is git-ignored; .env.example must keep WORKER_API_KEY empty
 │   ├── alembic.ini, compose.yaml, pyproject.toml, uv.lock, README.md
@@ -68,7 +71,11 @@ sentinel/
 │   │   ├── api/videos.py        <- /videos/{filename} (logged in)
 │   │   ├── schemas/auth.py      <- LoginRequest, UserResponse
 │   │   ├── schemas/events.py    <- ConfigSnapshot, EventCreate (worker contract), EventResponse
+│   │   ├── schemas/manifests.py <- ManifestRef pattern, ClipManifest (what the backend checks)
 │   │   ├── services/audit.py    <- audit() helper for audit_logs rows
+│   │   ├── services/manifests.py <- verify_manifest(): manifest + re-hash of the clip on disk
+│   │   ├── services/system_settings.py <- get_system_settings(session)
+│   │   ├── core/storage.py      <- RECORDINGS_DIR (repo-root recordings/)
 │   │   ├── cli/create_user.py   <- CLI to create accounts
 │   │   ├── core/config.py       <- pydantic-settings, env_file=".env" (relative to CWD!)
 │   │   ├── core/security.py     <- Argon2 password hashing, session token + SHA-256 hash
@@ -81,17 +88,22 @@ sentinel/
 │   ├── migrations/versions/     <- 2feed91c7392 (initial), ea5ce070565b (users.email -> username),
 │   │                               b7c1d9e4f2a6 (seed system_settings + no-delete triggers) = head
 │   ├── src/                     <- stray yolo*.pt copies, unused (git-ignored)
-│   └── tests/                   <- conftest (ENVIRONMENT=test), test_health, test_auth, test_security,
-│                                   test_event_create, test_videos, test_events (DB, needs TEST_DATABASE_URL)
+│   └── tests/                   <- conftest (ENVIRONMENT=test; DB fixtures db_connection, db_app,
+│                                   camera_name, db_client), test_health, test_auth, test_security,
+│                                   test_event_create, test_videos, test_events, test_system_settings,
+│                                   test_manifests (DB tests need TEST_DATABASE_URL)
 ├── workers/
 │   ├── .env                     <- git-ignored; contains only SENTINEL_API_KEY
 │   ├── .env.example             <- WRONG values, see 5.4
 │   ├── requirements.txt         <- UTF-8, pinned, complete
+│   ├── requirements-dev.txt     <- requirements.txt + pytest
 │   ├── src/config.py            <- frozen dataclass from os.getenv + workers/.env
-│   ├── src/monitor.py           <- entrypoint: YOLO loop, FfmpegWriter, config snapshot, HTTP post
+│   ├── src/monitor.py           <- entrypoint: YOLO loop, FfmpegWriter, config snapshot, report_incident
 │   ├── src/recorder.py          <- IncidentRecorder state machine -> Incident
+│   ├── src/manifest.py          <- write/load/sync manifests, event_payload, find_unsynced
+│   ├── src/sync_manifests.py    <- CLI: re-send every manifest with "synced": false
 │   ├── src/zone.py, zone_selector.py, config_zona.json
-│   └── tests/test_recorder.py
+│   └── tests/test_recorder.py, test_manifest.py
 └── frontend/                    <- Vite scaffold on main
 ```
 
@@ -164,6 +176,7 @@ workers still work; unknown fields → 422):
 | `recorded_start_at`, `recorded_end_at` | aware datetime | both or neither; end > start |
 | `size_bytes` | int > 0 | |
 | `config_snapshot` | `ConfigSnapshot` | `{schema_version: 1, model_ref, detection_config, settings}`; missing → `DEFAULT_CONFIG_SNAPSHOT` (fake, `region: null`) |
+| `source_manifest_ref` | `manifests/<[A-Za-z0-9._-]+>.json` | optional; requires `size_bytes` + recorded times; verified before saving (below) |
 
 Validation mirrors the DB CHECKs so bad input is a **422 with a message**, not a 500. The clip
 is `ready` (with `source_ready_at = now`) when `size_bytes` and the recorded span are sent,
@@ -175,8 +188,17 @@ has every `video_clips` column (`filepath`, `status`, `size_bytes`, `expires_at`
 No `duration_seconds` and no camera name: the client computes the duration.
 
 `expires_at = now + system_settings.retention_days` (read at save time; existing clips are not
-rewritten when it changes). Still fake: `source_manifest_ref = manifests/<uuid>.json` (never
-written).
+rewritten when it changes).
+
+Manifest verification (`app/services/manifests.verify_manifest`), before anything is written:
+manifest file exists under `RECORDINGS_DIR/manifests/`, parses as `ClipManifest`
+(`schema_version` 1, `camera_id`, `video.file/size_bytes/sha256`; other keys ignored), same
+camera and file as the request, clip exists, size equals manifest and request, and the
+**SHA-256 recomputed from the file** equals the manifest's. Any failure → 422 with the reason.
+Success stores `source_manifest_ref` and `sha256`. Without a manifest the clip gets
+`source_manifest_ref = placeholder/<uuid>` (column is NOT NULL UNIQUE) and no `sha256`.
+Hashing runs in the request (milliseconds for current clips); move it to `media_jobs` if clips
+get large. Posting the same clip twice → 409 (unique `filepath`/`source_manifest_ref`).
 
 ### 4.5 Settings and `.env`
 
@@ -264,10 +286,12 @@ uv run pytest
    `(time, frame)` pairs for pre-roll (buffer ≥ 1), needs `min_presence_frames` in a row to
    start, writes post-roll after the zone empties, then returns an **`Incident`** dataclass:
    `clip, started_at` (first frame of the presence streak), `last_person_seen_at`, `closed_at`,
-   `end_reason`, `recorded_start_at`, `recorded_end_at`. Times come from an injectable `clock`
-   (UTC); for video files they are processing times, for a live camera real times.
-6. `monitor.report_incident()` posts the incident with the file size and the config snapshot
-   built once by `build_config_snapshot()`. Logs status and body on HTTP errors. **No retry**.
+   `end_reason`, `recorded_start_at`, `recorded_end_at`, `frame_count`. Times come from an
+   injectable `clock` (UTC); for video files they are processing times, for a live camera real
+   times.
+6. `monitor.report_incident()` first writes the clip's manifest (5.6), then `sync_manifest()`
+   posts the event built from it. On failure the manifest stays `"synced": false` and the log
+   says to run `sync_manifests.py`. No automatic retry loop yet.
 7. On exit `recorder.close(end_reason)`: `stream_lost` when the video ends, `manual_stop` on `q`.
    The worker **exits** when the stream ends; no reconnect.
 
@@ -299,21 +323,46 @@ Relative paths resolve against `workers/`. `os.getenv` does not strip quotes: ke
 
 - `workers/.env.example` is wrong: quoted values, `SENTINEL_CLIPS_DIR=sentinel/recordings`, a
   non-existent video source. **Do not copy it**; the defaults are correct.
-- Clip names are `incident_<local time to the second>.mp4`: no camera name, can collide.
-- The worker uses `E:\sentinel\.venv` (Python 3.12, pip), not uv. pytest is not installed there;
-  the recorder tests only need the standard library. `workers/` has no ruff config.
+- Clip names are `incident_<local time to the second>.mp4`: no camera name, can collide (the user
+  chose to keep them for now). Manifest names follow the clip name.
+- The worker uses `E:\sentinel\.venv` (Python 3.12, pip), not uv; pytest is installed there
+  (`requirements-dev.txt`). `workers/` has no ruff config: linting it with the backend's config
+  reports a harmless I001 (it doesn't know `recorder` is local).
 
 ### 5.5 Worker commands (PowerShell)
 
 ```powershell
 E:\sentinel\.venv\Scripts\Activate.ps1
-pip install -r E:\sentinel\workers\requirements.txt
+pip install -r E:\sentinel\workers\requirements-dev.txt
 cd E:\sentinel\workers\src
 $env:SENTINEL_MIN_PRESENCE_SECONDS="0.5"   # easier to trigger with test1.mp4
 python monitor.py                           # 'q' quit, 'p' pause
+python sync_manifests.py                    # re-send clips the backend never received
 python zone_selector.py                     # draw the polygon, 's' saves
-cd E:\sentinel\workers; pytest tests        # after: pip install pytest
+cd E:\sentinel\workers; pytest tests
 ```
+
+### 5.6 Manifests (`src/manifest.py`)
+
+One JSON per clip, `recordings/manifests/<clip stem>.json`, written after the video writer is
+released and **before** the POST, atomically (`.json.tmp` then `os.replace`). Content:
+`schema_version` 1, `synced` (false until the backend stored the event), `camera_id`,
+`video{file, size_bytes, sha256, codec, fps, width, height, frame_count}`, the five event/clip
+times, `end_reason`, `config_snapshot`, `created_at`. The POST body is built **from the
+manifest** (`event_payload`), so the live path and the recovery path send the same thing; a
+missing or empty clip is sent without `source_manifest_ref`/size (stored `pending`).
+
+`sync_manifest()`: skips if already synced; POST; 201 or 409 (already stored) → `synced: true`
+(rewritten atomically); 4xx/5xx/connection error → stays false. `sync_manifests.py` runs it for
+every unsynced manifest (unreadable files reported, not skipped), prints a summary, exits 1 if
+anything is still pending (for a scheduled task). Safe to run repeatedly and alongside
+`monitor.py` thanks to the 409.
+
+This is an integrity + recovery record, not the segment-pinning manifest `schema.sql` imagines
+(continuous on-disk segments assembled by a `finalize_clip` media job). The worker keeps pre-roll
+in RAM and writes the final MP4 directly, so there are no segments to pin; gaps inside a clip are
+not detected and not recorded. Retention cleanup (section 8) must delete the manifest with its
+clip.
 
 ---
 
@@ -364,6 +413,18 @@ On 2026-10-28, `feat/system-settings-seed`:
   timeout follow the row) and a retention test in `test_events.py`. The DB fixtures
   (`db_connection`, `db_app`) moved to `tests/conftest.py`. The row kept its defaults afterwards.
 
+On 2026-10-28, `feat/clip-manifests`:
+
+- Backend: 64 passed, 1 skipped with the DB (14 new in `test_manifests.py`: verified clip →
+  `ready` + hash; second post → 409; no manifest → `placeholder/`; changed video, missing
+  manifest/video, corrupt manifest, other camera, other file, wrong size → 422; bad refs such as
+  `../secret.json` rejected). Ruff clean. Worker: 14 passed (new `test_manifest.py`).
+- Live outage test: `monitor.py` on `test1.mp4` with `SENTINEL_API_URL` pointing at a dead port →
+  3 clips, 3 manifests `synced: false`, 0 DB rows. Then `sync_manifests.py` against the running
+  backend → 3 saved (`ready`, real `manifests/...json` ref and SHA-256, one
+  `interrupted/stream_lost`), all manifests `synced: true`, exit 0; second run: nothing to sync.
+  Those 3 events were kept in the dev DB.
+
 ---
 
 ## 8. What is left (prioritised; frontend UI excluded)
@@ -390,24 +451,27 @@ On 2026-10-28, `feat/system-settings-seed`:
 12. ~~Migration seeding `system_settings`; read retention and session timeouts from it~~ — done
     on `feat/system-settings-seed` (4.6). No API to change the settings yet (admin endpoint,
     audited, later).
-13. `source_manifest_ref`: real manifest or documented placeholder.
-14. Unique clip names (camera name + milliseconds or UUID).
+13. ~~`source_manifest_ref`~~ — real manifests on `feat/clip-manifests` (5.6, 4.4).
+14. Unique clip names (camera name + milliseconds or UUID). Postponed by the user.
 
 **🟡 Worker for real use**
-15. Retry / local queue for failed posts.
+15. Retry for failed posts: manual/scheduled `sync_manifests.py` exists (5.6). Left: run it
+    automatically (at worker startup, periodically, or as a Windows scheduled task).
 16. Reconnect on stream loss instead of exiting.
 17. Load stream URL and zone from the camera's DB row instead of local files (multi-camera).
-18. Orphan check: files without events, events without files.
+18. Orphan check: unsynced manifests are covered by `sync_manifests.py`. Left: clips without a
+    manifest, and DB clips whose file is missing.
 
 **🟡 Retention and database**
-19. Retention cleanup job: delete files past `expires_at`, mark clips `deleted` (privacy).
+19. Retention cleanup job: delete files **and their manifests** past `expires_at`, mark clips
+    `deleted` (privacy).
 20. Migration for the `schema.sql` triggers; then delete or regenerate `schema.sql`.
 21. Endpoint tests against the real DB (auth, events, videos, permissions).
 
 **⚪ Housekeeping**
 22. Fix `workers/.env.example`.
 23. Delete `backend/app/.env`, `backend/src/`, merged local branches.
-24. Worker dev setup: `requirements-dev.txt` with pytest, ruff config for `workers/`.
+24. Worker dev setup: ~~`requirements-dev.txt` with pytest~~ (done); ruff config for `workers/`.
 25. Real top-level `README.md` (start DB, backend, worker).
 
 **⚪ Before real use in the clinic**
