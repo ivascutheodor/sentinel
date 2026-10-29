@@ -14,6 +14,7 @@ const now = Date.parse('2026-10-26T10:00:00Z') / 1000
 const clip = { id: clipId, part_number: 1, status: 'ready', filepath: '/srv/recordings/entrance 01.mp4', expires_at: '2026-10-27T10:00:00Z' }
 const richEvent = { id: eventId, camera_id: cameraId, event_type: 'person_presence', status: 'completed', started_at: '2026-10-20T09:00:00Z', last_person_seen_at: '2026-10-20T09:00:20Z', closed_at: '2026-10-20T09:00:30Z', end_reason: 'person_absent', created_at: '2026-10-20T10:00:00Z', clips: [clip] }
 const serverEvent = { ...flatEvent, status: 'completed', started_at: richEvent.started_at, last_person_seen_at: richEvent.last_person_seen_at, closed_at: richEvent.closed_at, duration_seconds: 30, clip_status: 'ready' }
+const page = items => ({ items, total: items.length, limit: 50, offset: 0 })
 
 function mockFetch(t, respond) {
   const previous = globalThis.fetch
@@ -51,7 +52,7 @@ test('auth and event operations use supported paths/methods, including 204 respo
   mockFetch(t, async (url, options) => {
     calls.push([url, options.method ?? 'GET'])
     if (url.endsWith('/auth/me')) return Response.json(rawUser)
-    if (url.endsWith('/events')) return Response.json([flatEvent])
+    if (url.endsWith('/events')) return Response.json(page([flatEvent]))
     if (options.method === 'DELETE' || url.endsWith('/auth/logout')) return new Response(null, { status: 204 })
     return Response.json(flatEvent)
   })
@@ -142,12 +143,17 @@ test('malformed IDs, missing fields, naive timestamps, and unsupported states fa
 test('history and detail accept the current authenticated server response', async t => {
   mockFetch(t, async () => Response.json(serverEvent))
   assert.equal((await getEvent(eventId, new AbortController().signal)).timestampLabel, 'Started')
-  globalThis.fetch = async () => Response.json([serverEvent])
+  globalThis.fetch = async () => Response.json(page([serverEvent]))
   assert.equal((await getEvents(new AbortController().signal))[0].clips[0].status, 'ready')
 })
 
+test('a bare event list (the old response shape) is rejected', async t => {
+  mockFetch(t, async () => Response.json([flatEvent]))
+  await assert.rejects(getEvents(new AbortController().signal), error => error.status === 502)
+})
+
 test('events sort newest first and never require a camera-list response', async t => {
-  mockFetch(t, async () => Response.json([flatEvent, { ...flatEvent, id: clipId, camera_id: clipId, created_at: '2026-10-21T10:00:00+00:00' }]))
+  mockFetch(t, async () => Response.json(page([flatEvent, { ...flatEvent, id: clipId, camera_id: clipId, created_at: '2026-10-21T10:00:00+00:00' }])))
   const events = await getEvents(new AbortController().signal)
   assert.deepEqual(events.map(event => event.id), [clipId, eventId])
 })

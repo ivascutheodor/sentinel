@@ -114,7 +114,8 @@ export async function getCurrentUser(signal: AbortSignal): Promise<User> {
 }
 
 export async function getEvents(signal: AbortSignal): Promise<SecurityEvent[]> {
-  const response = await api<unknown>('/events', { signal })
+  // The backend returns one page: { items, total, limit, offset }.
+  const response = object(await api<unknown>('/events', { signal })).items
   if (!Array.isArray(response)) return invalidResponse()
   return response.map(value => parseEvent(value)).sort((a, b) => b.ts - a.ts || a.id.localeCompare(b.id))
 }
