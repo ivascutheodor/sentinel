@@ -61,7 +61,7 @@ class Camera(Base):
         Index("uq_cameras_name_lower", text("lower(name)"), unique=True),
         {
             "comment": (
-                "Single-clinic camera identity survives changes of name, address and credentials. "
+                "Single-tenant camera identity survives changes of name, address and credentials. "
                 "Exactly one recorder owns a camera at a time. Source/ROI changes while capturing "
                 "require an audited stop/restart; do not silently change an open event. Set "
                 "is_enabled=false to stop monitoring; this does not by itself revoke archival "
