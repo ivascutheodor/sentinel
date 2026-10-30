@@ -171,7 +171,7 @@ Accounts are deactivated, never deleted. Passwords are 12 to 1024 characters. A 
 a deactivation or an admin password reset logs that user out everywhere; changing your own
 password logs out your other sessions and keeps the current one. An admin cannot remove
 their own admin role or deactivate themselves, and the last active admin cannot be
-removed, so the clinic always keeps one.
+removed, so the system always keeps one.
 
 ### Login rate limiting
 

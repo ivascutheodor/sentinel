@@ -75,7 +75,7 @@ def update_user(user_id: UUID, body: UserUpdate, session: SessionDep, admin: Adm
         and (new_role != UserRole.ADMIN or not new_active)
     )
     if loses_admin:
-        # Checked here, not in the frontend: the clinic must never be left without an admin.
+        # Checked here, not in the frontend: the system must never be left without an admin.
         if user.id == admin.id:
             raise conflict("You cannot remove your own administrator access.")
         if not another_active_admin_exists(session, user.id):

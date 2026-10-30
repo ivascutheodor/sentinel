@@ -42,7 +42,7 @@ class User(Base):
         ),
         {
             "comment": (
-                "Single-clinic accounts. Deactivate rather than hard-delete accounts referenced "
+                "Single-tenant accounts. Deactivate rather than hard-delete accounts referenced "
                 "by historical records. Authentication must check is_active. A role change or "
                 "deactivation also invalidates affected sessions/live authorizations."
             )
