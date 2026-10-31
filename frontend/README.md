@@ -27,7 +27,7 @@ The browser calls the API directly on the same hostname and protocol at port 800
 In `backend/.env`, allow the exact frontend origin you open in your browser, then restart the backend:
 
 ```dotenv
-CORS_ALLOWED_ORIGINS=["http://localhost:5173", "http://homie:5173"]
+CORS_ORIGINS=["http://localhost:5173", "http://homie:5173"]
 ```
 
 Replace `homie` with your actual Tailscale/private hostname or IP. Use the same hostname and protocol for both frontend and backend so session cookies work across their different ports. The backend must listen on `0.0.0.0:8000` to accept network connections.

@@ -139,3 +139,8 @@ class Event(Base):
         foreign_keys="VideoClip.event_id",
         passive_deletes="all",
     )
+
+    @property
+    def camera_name(self) -> str:
+        """For API responses; load `Event.camera` with the query to avoid one query per event."""
+        return self.camera.name

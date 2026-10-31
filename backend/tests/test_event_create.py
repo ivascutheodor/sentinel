@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from server.server import EventCreate
+from app.schemas.events import EventCreate
 
 FULL_EVENT = {
     "camera_id": "test_camera_01",

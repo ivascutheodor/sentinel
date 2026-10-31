@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 
-from server.server import app
+from app.main import app
 
 client = TestClient(app)
 
@@ -11,6 +11,9 @@ def test_user_routes_require_session_cookie() -> None:
         "/api/v1/events",
         "/api/v1/events/00000000-0000-0000-0000-000000000000",
         "/api/v1/videos/clip.mp4",
+        "/api/v1/cameras",
+        "/api/v1/users",
+        "/api/v1/settings",
     ):
         assert client.get(path).status_code == 401, path
 

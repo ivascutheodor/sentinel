@@ -51,7 +51,7 @@ CREATE TABLE IF NOT EXISTS "users" (
 	PRIMARY KEY("id")
 );
 
-COMMENT ON TABLE "users" IS 'Single-clinic accounts. Deactivate rather than hard-delete accounts referenced by historical records. Authentication must check is_active. A role change or deactivation also invalidates affected sessions/live authorizations.';
+COMMENT ON TABLE "users" IS 'Single-tenant accounts. Deactivate rather than hard-delete accounts referenced by historical records. Authentication must check is_active. A role change or deactivation also invalidates affected sessions/live authorizations.';
 COMMENT ON COLUMN "users"."username" IS 'Login name: 3-50 lower-case letters, digits, dot, underscore or hyphen. UNIQUE enforces the canonical identity.';
 COMMENT ON COLUMN "users"."password_hash" IS 'Encoded password hash, including algorithm and parameters. Hash with Argon2id in the authentication service; never store plaintext.';
 
@@ -90,7 +90,7 @@ AND (detection_config->'region' = 'null'::jsonb OR
 	PRIMARY KEY("id")
 );
 
-COMMENT ON TABLE "cameras" IS 'Single-clinic camera identity survives changes of name, address and credentials. Exactly one recorder owns a camera at a time. Source/ROI changes while capturing require an audited stop/restart; do not silently change an open event. Set is_enabled=false to stop monitoring; this does not by itself revoke archival access.';
+COMMENT ON TABLE "cameras" IS 'Single-tenant camera identity survives changes of name, address and credentials. Exactly one recorder owns a camera at a time. Source/ROI changes while capturing require an audited stop/restart; do not silently change an open event. Set is_enabled=false to stop monitoring; this does not by itself revoke archival access.';
 COMMENT ON COLUMN "cameras"."location" IS 'Physical camera location';
 COMMENT ON COLUMN "cameras"."stream_url" IS 'RTSP URL configured through the admin UI, without embedded username/password or secret query parameters. Backend parses and validates host/port/path and applies the installation network policy. Exact URL is UNIQUE; credentials are resolved separately. Includes cross-column CHECK expressions here for drawDB PostgreSQL export compatibility.';
 COMMENT ON COLUMN "cameras"."credentials_ref" IS 'Optional key in the installation secret store containing camera username/password. The secret store is backed up separately; its encryption key is never stored in this database.';

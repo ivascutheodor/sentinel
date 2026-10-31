@@ -3,6 +3,7 @@ from typing import Annotated, Literal, Self
 from uuid import UUID
 
 from pydantic import (
+    AfterValidator,
     AwareDatetime,
     BaseModel,
     ConfigDict,
@@ -12,9 +13,21 @@ from pydantic import (
     model_validator,
 )
 
+from app.core.storage import is_plain_file_name
 from app.db.enums import CaptureState, EventType, VideoStatus
+from app.schemas.manifests import ManifestRef
 
 NonBlank = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+
+
+def _plain_file_name(value: str) -> str:
+    if not is_plain_file_name(value):
+        raise ValueError("Must be a plain file name inside recordings/, without folders.")
+    return value
+
+
+# The API later serves and deletes this file, so it must not point outside recordings/.
+FileName = Annotated[NonBlank, AfterValidator(_plain_file_name)]
 EndReason = Literal[
     "person_absent",
     "stream_lost",
@@ -27,6 +40,8 @@ EndReason = Literal[
 
 
 class ConfigSnapshot(BaseModel):
+    """Mirrors the `events.config_snapshot` CHECK, so a bad snapshot is a 422, not a 500."""
+
     model_config = ConfigDict(extra="forbid")
 
     schema_version: Literal[1]
@@ -35,34 +50,53 @@ class ConfigSnapshot(BaseModel):
     settings: dict[str, JsonValue]
 
 
-class VideoClipCreate(BaseModel):
+class EventCreate(BaseModel):
+    """What the worker posts once a clip is finished.
+
+    The backend owns the rest: event status from `end_reason`, clip status from whether the
+    file's size and time span are known, and `expires_at`. With `source_manifest_ref` the
+    clip is verified against the worker's manifest and its SHA-256 is stored.
+    """
+
     model_config = ConfigDict(extra="forbid")
 
-    part_number: int = Field(ge=1)
-    source_manifest_ref: NonBlank
-    expires_at: AwareDatetime
-    status: Literal[VideoStatus.PENDING, VideoStatus.READY] = VideoStatus.PENDING
-    source_ready_at: AwareDatetime | None = None
+    camera_id: NonBlank  # the camera's name, e.g. "test_camera_01"
+    video_path: FileName  # file name inside recordings/
+
+    # Optional so a worker that only sends the two fields above still works; the
+    # backend then falls back to "now" and leaves the clip `pending`.
+    started_at: AwareDatetime | None = None
+    last_person_seen_at: AwareDatetime | None = None
+    closed_at: AwareDatetime | None = None
+    end_reason: EndReason = "person_absent"
     recorded_start_at: AwareDatetime | None = None
     recorded_end_at: AwareDatetime | None = None
-    filepath: NonBlank | None = None
     size_bytes: int | None = Field(default=None, gt=0)
-    sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+    config_snapshot: ConfigSnapshot | None = None
+    # The worker's sealed manifest for this clip; the backend checks the file against it.
+    source_manifest_ref: ManifestRef | None = None
 
     @model_validator(mode="after")
-    def validate_recording(self) -> Self:
-        start, end = self.recorded_start_at, self.recorded_end_at
-        if (start is None) != (end is None):
-            raise ValueError("recorded_start_at and recorded_end_at must be supplied together")
-        if start is not None and end is not None and end <= start:
-            raise ValueError("recorded_end_at must be after recorded_start_at")
-        if self.status == VideoStatus.READY and any(
-            value is None
-            for value in (self.filepath, self.size_bytes, start, end, self.source_ready_at)
+    def check_times(self) -> Self:
+        if self.source_manifest_ref is not None and (
+            self.size_bytes is None or self.recorded_start_at is None
         ):
-            raise ValueError(
-                "Ready clips require filepath, size_bytes, recording times and source_ready_at"
-            )
+            raise ValueError("A manifest needs size_bytes and the recorded start/end times.")
+        # Each group is all-or-nothing: mixing sent values with a "now" fallback could
+        # break the ordering the `events` and `video_clips` CHECKs enforce.
+        event_times = [self.started_at, self.last_person_seen_at, self.closed_at]
+        if any(t is not None for t in event_times):
+            if any(t is None for t in event_times):
+                raise ValueError(
+                    "Send started_at, last_person_seen_at and closed_at together, or none."
+                )
+            if not self.started_at <= self.last_person_seen_at <= self.closed_at:
+                raise ValueError("Expected started_at <= last_person_seen_at <= closed_at.")
+
+        if (self.recorded_start_at is None) != (self.recorded_end_at is None):
+            raise ValueError("Send recorded_start_at and recorded_end_at together, or neither.")
+        if self.recorded_start_at is not None and self.recorded_end_at <= self.recorded_start_at:
+            raise ValueError("recorded_end_at must be after recorded_start_at.")
         return self
 
 
@@ -88,45 +122,12 @@ class VideoClipResponse(BaseModel):
     updated_at: datetime
 
 
-class EventCreate(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    camera_id: UUID
-    event_type: EventType = EventType.PERSON_PRESENCE
-    status: CaptureState = CaptureState.CAPTURING
-    started_at: AwareDatetime
-    last_person_seen_at: AwareDatetime
-    closed_at: AwareDatetime | None = None
-    end_reason: EndReason | None = None
-    config_snapshot: ConfigSnapshot
-    clips: list[VideoClipCreate] = Field(default_factory=list)
-
-    @model_validator(mode="after")
-    def validate_capture(self) -> Self:
-        if self.last_person_seen_at < self.started_at:
-            raise ValueError("last_person_seen_at must be at or after started_at")
-        if self.closed_at is not None and self.closed_at < self.last_person_seen_at:
-            raise ValueError("closed_at must be at or after last_person_seen_at")
-        if self.status == CaptureState.CAPTURING:
-            if self.closed_at is not None or self.end_reason is not None:
-                raise ValueError("Capturing events cannot have closed_at or end_reason")
-        else:
-            if self.closed_at is None or self.end_reason is None:
-                raise ValueError("Closed events require closed_at and end_reason")
-            if self.status == CaptureState.COMPLETED and self.end_reason != "person_absent":
-                raise ValueError("Completed events require end_reason='person_absent'")
-            if self.status == CaptureState.INTERRUPTED and self.end_reason == "person_absent":
-                raise ValueError("Interrupted events require an interruption reason")
-        if len({clip.part_number for clip in self.clips}) != len(self.clips):
-            raise ValueError("Clip part numbers must be unique within an event")
-        return self
-
-
 class EventResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
     camera_id: UUID
+    camera_name: str
     event_type: EventType
     status: CaptureState
     started_at: datetime
@@ -136,3 +137,12 @@ class EventResponse(BaseModel):
     created_at: datetime
     config_snapshot: dict[str, JsonValue]
     clips: list[VideoClipResponse]
+
+
+class EventPage(BaseModel):
+    """One page of `GET /events`: `total` counts every matching event, not just `items`."""
+
+    items: list[EventResponse]
+    total: int
+    limit: int
+    offset: int
