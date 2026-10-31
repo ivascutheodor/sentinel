@@ -18,5 +18,12 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+
+# Synthetic sample recordings used by the frontend demo.
+!frontend/public/demo/*.mp4
+
 # Clips and their manifests are data, not code
 recordings/
+
+# pnpm content-addressed store (created when pnpm runs inside the repo)
+.pnpm-store/

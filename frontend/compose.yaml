@@ -1,0 +1,11 @@
+name: sentinel-frontend
+
+services:
+  frontend:
+    build:
+      context: .
+      args:
+        VITE_API_ORIGIN: ${VITE_API_ORIGIN:-}
+    init: true
+    ports:
+      - "0.0.0.0:5173:3000"
